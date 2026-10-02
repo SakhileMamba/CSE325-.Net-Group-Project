@@ -20,10 +20,16 @@ internal sealed class IdentityRedirectManager(NavigationManager navigationManage
     {
         uri ??= "";
 
-        // Prevent open redirects.
-        if (!Uri.IsWellFormedUriString(uri, UriKind.Relative))
+        // Resolve against the application base and reject external or malformed return URLs.
+        if (!Uri.TryCreate(new Uri(navigationManager.BaseUri), uri, out var destination)
+            || !new Uri(navigationManager.BaseUri).IsBaseOf(destination)
+            || uri.Contains('\\'))
         {
-            uri = navigationManager.ToBaseRelativePath(uri);
+            uri = "account";
+        }
+        else
+        {
+            uri = navigationManager.ToBaseRelativePath(destination.AbsoluteUri);
         }
 
         navigationManager.NavigateTo(uri);
