@@ -1,0 +1,140 @@
+@page "/my-posts"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@using System.ComponentModel.DataAnnotations
+@using SocialMediaApp.Data
+@using SocialMediaApp.Services
+@inject PostService PostService
+@inject ILogger<MyPosts> Logger
+
+<PageTitle>My Posts</PageTitle>
+<h1>My Posts</h1>
+
+@if (message is not null)
+{
+    <div class="alert alert-info" role="status">@message</div>
+}
+
+<EditForm Model="input" OnValidSubmit="SaveAsync" FormName="post-editor">
+    <DataAnnotationsValidator />
+    <ValidationSummary class="text-danger" />
+    <label for="post-content" class="form-label">@(editingId is null ? "Create a post" : "Edit your post")</label>
+    <InputTextArea id="post-content" class="form-control" @bind-Value="input.Content" maxlength="250" rows="3" disabled="@busy" />
+    <p class="form-text">Maximum 250 characters.</p>
+    <button type="submit" class="btn btn-primary" disabled="@busy">@(editingId is null ? "Create post" : "Save changes")</button>
+    @if (editingId is not null)
+    {
+        <button type="button" class="btn btn-secondary ms-2" @onclick="CancelEdit" disabled="@busy">Cancel</button>
+    }
+</EditForm>
+
+<hr />
+@if (posts is null)
+{
+    <p>Loading posts...</p>
+}
+else if (posts.Count == 0)
+{
+    <p>You have no posts yet.</p>
+}
+else
+{
+    @foreach (var post in posts)
+    {
+        <article class="card mb-3" @key="post.Id">
+            <div class="card-body">
+                <p class="card-text" style="white-space: pre-wrap; overflow-wrap: anywhere;">@post.Content</p>
+                <p class="text-muted small">@post.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</p>
+                @if (deletingId == post.Id)
+                {
+                    <p>Delete this post?</p>
+                    <button class="btn btn-danger" @onclick="() => DeleteAsync(post.Id)" disabled="@busy">Confirm delete</button>
+                    <button class="btn btn-secondary ms-2" @onclick="() => deletingId = null" disabled="@busy">Cancel</button>
+                }
+                else
+                {
+                    <button class="btn btn-outline-primary" @onclick="() => StartEdit(post)" disabled="@busy">Edit</button>
+                    <button class="btn btn-outline-danger ms-2" @onclick="() => deletingId = post.Id" disabled="@busy">Delete</button>
+                }
+            </div>
+        </article>
+    }
+}
+
+@code {
+    private List<Post>? posts;
+    private PostInput input = new();
+    private int? editingId;
+    private int? deletingId;
+    private bool busy;
+    private string? message;
+
+    protected override async Task OnInitializedAsync()
+        => await RunAsync(async () => posts = await PostService.GetMyPostsAsync());
+
+    private void StartEdit(Post post)
+    {
+        editingId = post.Id;
+        deletingId = null;
+        input = new PostInput { Content = post.Content };
+        message = null;
+    }
+
+    private void CancelEdit()
+    {
+        editingId = null;
+        input = new();
+    }
+
+    private Task SaveAsync() => RunAsync(async () =>
+    {
+        if (editingId is int id)
+        {
+            if (!await PostService.UpdateAsync(id, input.Content))
+            {
+                message = "This post is unavailable or does not belong to you.";
+                return;
+            }
+            message = "Post updated.";
+        }
+        else
+        {
+            await PostService.CreateAsync(input.Content);
+            message = "Post created.";
+        }
+        CancelEdit();
+        posts = await PostService.GetMyPostsAsync();
+    });
+
+    private Task DeleteAsync(int id) => RunAsync(async () =>
+    {
+        message = await PostService.DeleteAsync(id)
+            ? "Post deleted." : "This post is unavailable or does not belong to you.";
+        deletingId = null;
+        if (editingId == id) CancelEdit();
+        posts = await PostService.GetMyPostsAsync();
+    });
+
+    private async Task RunAsync(Func<Task> action)
+    {
+        if (busy) return;
+        busy = true;
+        message = null;
+        try { await action(); }
+        catch (ValidationException ex) { message = ex.Message; }
+        catch (UnauthorizedAccessException ex) { message = ex.Message; }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Post management operation failed.");
+            message = "Unable to complete the operation. Please try again.";
+        }
+        finally { busy = false; }
+    }
+
+    private sealed class PostInput
+    {
+        [Required(ErrorMessage = "Please enter post content.")]
+        [StringLength(250, ErrorMessage = "Posts cannot exceed 250 characters.")]
+        public string Content { get; set; } = "";
+    }
+}
