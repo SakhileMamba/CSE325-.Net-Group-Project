@@ -45,6 +45,7 @@ else
             <div class="card-body">
                 <p class="card-text" style="white-space: pre-wrap; overflow-wrap: anywhere;">@post.Content</p>
                 <p class="text-muted small">@post.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</p>
+                <a class="btn btn-link px-0 mb-2" href="@($"posts/{post.Id}")">Comments &amp; replies</a>
                 @if (deletingId == post.Id)
                 {
                     <p>Delete this post?</p>
