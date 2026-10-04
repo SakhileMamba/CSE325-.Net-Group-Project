@@ -1,0 +1,20 @@
+@using SocialMediaApp.Data
+
+<article class="border-start border-3 ps-3 py-2 mb-2" style="margin-left: @(Math.Min(Depth, 6))rem;" @key="Comment.Id">
+    <p class="small text-muted mb-1">@(Comment.User.UserName ?? "User") · @Comment.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</p>
+    <p style="white-space: pre-wrap; overflow-wrap: anywhere;">@Comment.Content</p>
+    <button type="button" class="btn btn-sm btn-outline-primary" disabled="@Disabled"
+            @onclick="() => OnReply.InvokeAsync(Comment)">Reply</button>
+</article>
+@foreach (var reply in Comments.Where(c => c.ParentCommentId == Comment.Id))
+{
+    <ThreadComment @key="reply.Id" Comment="reply" Comments="Comments" Depth="@(Depth + 1)" OnReply="OnReply" Disabled="Disabled" />
+}
+
+@code {
+    [Parameter, EditorRequired] public Comment Comment { get; set; } = null!;
+    [Parameter, EditorRequired] public IReadOnlyList<Comment> Comments { get; set; } = Array.Empty<Comment>();
+    [Parameter] public int Depth { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback<Comment> OnReply { get; set; }
+}

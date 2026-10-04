@@ -95,6 +95,61 @@ try
         db.Posts.Add(new Post { Content = "No owner", UserId = "missing-user", CreatedAtUtc = DateTime.UtcNow });
         await Reject<DbUpdateException>(async () => { await db.SaveChangesAsync(); }, "SQLite requires an existing owner");
     }
+    // Comments share the same Identity setup and migrated temporary database.
+    var discussions = new CommentService(factory, auth);
+    var discussionPost = (await service.GetMyPostsAsync()).Single();
+    await discussions.AddAsync(discussionPost.Id, "Root comment");
+    var root = (await discussions.GetCommentsAsync(discussionPost.Id)).Single();
+    Check(root.ParentCommentId is null && root.UserId == "owner-a" && root.Content == "Root comment",
+        "Create root comment with authenticated author");
+    auth.SignIn("owner-b");
+    Check((await discussions.GetPostAsync(discussionPost.Id))?.UserId == "owner-a",
+        "Read another user's post for discussion");
+    await discussions.AddAsync(discussionPost.Id, "Reply from B", root.Id);
+    var reply = (await discussions.GetCommentsAsync(discussionPost.Id)).Single(c => c.ParentCommentId == root.Id);
+    Check(reply.UserId == "owner-b" && reply.User.UserName == "b", "Reply across users with author display data");
+    await discussions.AddAsync(discussionPost.Id, "Nested reply", reply.Id);
+    await discussions.AddAsync(discussionPost.Id, "Second root");
+    var thread = await discussions.GetCommentsAsync(discussionPost.Id);
+    Check(thread.Count == 4 && thread.Count(c => c.ParentCommentId is null) == 2 &&
+        thread.Any(c => c.ParentCommentId == reply.Id), "Read threaded replies and separate roots");
+    var otherPost = (await service.GetMyPostsAsync()).Single();
+    await Reject<ValidationException>(() => discussions.AddAsync(otherPost.Id, "Wrong post", root.Id),
+        "Reject reply to a comment on another post");
+    await Reject<ValidationException>(() => discussions.AddAsync(discussionPost.Id, "Missing parent", int.MaxValue),
+        "Reject missing parent comment");
+    await Reject<ValidationException>(() => discussions.AddAsync(int.MaxValue, "Missing post"), "Reject missing post");
+    Check(await discussions.GetPostAsync(int.MaxValue) is null, "Missing discussion post returns null");
+    await Reject<ValidationException>(() => discussions.AddAsync(discussionPost.Id, " \t\n"), "Reject blank comment");
+    await Reject<ValidationException>(() => discussions.AddAsync(discussionPost.Id, "", root.Id), "Reject blank reply");
+    Check((await discussions.GetCommentsAsync(otherPost.Id)).Count == 0, "Comments isolated by post");
+    auth.SignOut();
+    await Reject<UnauthorizedAccessException>(() => discussions.AddAsync(discussionPost.Id, "Anonymous"),
+        "Reject unauthenticated comment");
+    await Reject<UnauthorizedAccessException>(() => discussions.AddAsync(discussionPost.Id, "Anonymous", root.Id),
+        "Reject unauthenticated reply");
+    await Reject<UnauthorizedAccessException>(() => discussions.GetCommentsAsync(discussionPost.Id),
+        "Reject unauthenticated discussion read");
+    await Reject<UnauthorizedAccessException>(() => discussions.GetPostAsync(discussionPost.Id),
+        "Reject unauthenticated post discussion read");
+    auth.SignIn("owner-a");
+    Check(await service.DeleteAsync(discussionPost.Id), "Delete post containing nested discussion");
+    Check((await discussions.GetCommentsAsync(discussionPost.Id)).Count == 0,
+        "Deleting post removes all comments and nested replies");
+
+    // Account deletion removes its comments but preserves other authors' replies.
+    await discussions.AddAsync(otherPost.Id, "Author A comment");
+    var accountRoot = (await discussions.GetCommentsAsync(otherPost.Id)).Single();
+    auth.SignIn("owner-b");
+    await discussions.AddAsync(otherPost.Id, "Author B reply", accountRoot.Id);
+    await using (var db = factory.CreateDbContext())
+    {
+        db.Users.Remove(await db.Users.SingleAsync(u => u.Id == "owner-a"));
+        await db.SaveChangesAsync();
+    }
+    var preserved = (await discussions.GetCommentsAsync(otherPost.Id)).Single();
+    Check(preserved.UserId == "owner-b" && preserved.ParentCommentId is null,
+        "Account deletion preserves other authors' replies as root comments");
     Console.WriteLine($"All {passed} checks passed.");
 }
 finally

@@ -1,0 +1,125 @@
+@page "/posts/{PostId:int}"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@using System.ComponentModel.DataAnnotations
+@using SocialMediaApp.Data
+@using SocialMediaApp.Services
+@inject CommentService CommentService
+@inject ILogger<PostDiscussion> Logger
+
+<PageTitle>Post Discussion</PageTitle>
+<h1>Post Discussion</h1>
+@if (message is not null)
+{
+    <div class="alert alert-info" role="status">@message</div>
+}
+@if (loading)
+{
+    <p>Loading discussion...</p>
+}
+else if (post is null)
+{
+    <p>The post is unavailable.</p>
+}
+else
+{
+    <article class="card mb-4">
+        <div class="card-body">
+            <p class="text-muted">@(post.User.UserName ?? "User") · @post.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</p>
+            <p style="white-space: pre-wrap; overflow-wrap: anywhere;">@post.Content</p>
+        </div>
+    </article>
+    <h2>Comments</h2>
+    <EditForm Model="input" OnValidSubmit="SubmitAsync" FormName="comment-editor">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="text-danger" />
+        @if (replyTo is not null)
+        {
+            <p>Replying to @(replyTo.User.UserName ?? "User"): @replyTo.Content</p>
+        }
+        <label for="comment-content" class="form-label">@(replyTo is null ? "Add a comment" : "Write your reply")</label>
+        <InputTextArea id="comment-content" class="form-control mb-2" @bind-Value="input.Content" rows="3" disabled="@busy" />
+        <button type="submit" class="btn btn-primary" disabled="@busy">@(replyTo is null ? "Post comment" : "Post reply")</button>
+        @if (replyTo is not null)
+        {
+            <button type="button" class="btn btn-secondary ms-2" disabled="@busy" @onclick="CancelReply">Cancel reply</button>
+        }
+    </EditForm>
+    <hr />
+    @if (comments.Count == 0)
+    {
+        <p>No comments yet. Start the conversation!</p>
+    }
+    @foreach (var comment in comments.Where(c => c.ParentCommentId is null))
+    {
+        <ThreadComment @key="comment.Id" Comment="comment" Comments="comments" OnReply="StartReply" Disabled="busy" />
+    }
+}
+
+@code {
+    [Parameter] public int PostId { get; set; }
+    private Post? post;
+    private List<Comment> comments = new();
+    private CommentInput input = new();
+    private Comment? replyTo;
+    private bool loading = true;
+    private bool busy;
+    private string? message;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        loading = true;
+        post = null;
+        comments = new();
+        CancelReply();
+        await RunAsync(async () =>
+        {
+            post = await CommentService.GetPostAsync(PostId);
+            if (post is not null) comments = await CommentService.GetCommentsAsync(PostId);
+        });
+        loading = false;
+    }
+
+    private void StartReply(Comment comment)
+    {
+        replyTo = comment;
+        input = new();
+        message = null;
+    }
+
+    private void CancelReply()
+    {
+        replyTo = null;
+        input = new();
+    }
+
+    private Task SubmitAsync() => RunAsync(async () =>
+    {
+        await CommentService.AddAsync(PostId, input.Content, replyTo?.Id);
+        CancelReply();
+        comments = await CommentService.GetCommentsAsync(PostId);
+        message = "Your comment was posted.";
+    });
+
+    private async Task RunAsync(Func<Task> action)
+    {
+        if (busy) return;
+        busy = true;
+        message = null;
+        try { await action(); }
+        catch (ValidationException ex) { message = ex.Message; }
+        catch (UnauthorizedAccessException ex) { message = ex.Message; }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Discussion operation failed for post {PostId}.", PostId);
+            message = "Unable to complete the operation. Refresh the page and try again.";
+        }
+        finally { busy = false; }
+    }
+
+    private sealed class CommentInput
+    {
+        [Required(ErrorMessage = "Please enter comment content.")]
+        public string Content { get; set; } = "";
+    }
+}
