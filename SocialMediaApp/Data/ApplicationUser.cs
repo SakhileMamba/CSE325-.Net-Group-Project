@@ -2,8 +2,16 @@ using Microsoft.AspNetCore.Identity;
 
 namespace SocialMediaApp.Data;
 
-// Add profile data for application users by adding properties to the ApplicationUser class
+// Stores additional profile information for each application user.
 public class ApplicationUser : IdentityUser
 {
-}
+    public string? FirstName { get; set; }
 
+    public string? LastName { get; set; }
+
+    public string? Bio { get; set; }
+
+    public string? Interests { get; set; }
+
+    public string? ProfilePicture { get; set; }
+}

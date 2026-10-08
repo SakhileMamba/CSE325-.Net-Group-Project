@@ -1,0 +1,158 @@
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@using SocialMediaApp.Data
+
+@rendermode InteractiveServer
+
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IWebHostEnvironment Environment
+
+<div class="mb-4">
+    <h5>Profile picture</h5>
+
+    @if (!string.IsNullOrEmpty(ProfilePicture))
+    {
+        <div class="mb-3">
+            <img src="@ProfilePicture"
+                 alt="Profile picture"
+                 style="width: 120px; height: 120px; object-fit: cover; border-radius: 50%;" />
+        </div>
+    }
+
+    <InputFile OnChange="UploadPhoto" accept=".jpg,.jpeg,.png,.gif" />
+
+    @if (!string.IsNullOrEmpty(Message))
+    {
+        <div class="mt-2 text-success">@Message</div>
+    }
+
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="mt-2 text-danger">@ErrorMessage</div>
+    }
+</div>
+
+@code {
+    private ApplicationUser? user;
+    private string? ProfilePicture;
+    private string? Message;
+    private string? ErrorMessage;
+
+    private const long MaxFileSize = 5 * 1024 * 1024;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        user = await UserManager.GetUserAsync(authState.User);
+
+        if (user is not null)
+        {
+            ProfilePicture = user.ProfilePicture;
+        }
+    }
+
+    private async Task UploadPhoto(InputFileChangeEventArgs e)
+    {
+        Message = null;
+        ErrorMessage = null;
+
+        if (user is null)
+        {
+            ErrorMessage = "Unable to find your account.";
+            return;
+        }
+
+        var file = e.File;
+
+        if (file is null)
+        {
+            ErrorMessage = "Please select an image.";
+            return;
+        }
+
+        if (file.Size > MaxFileSize)
+        {
+            ErrorMessage = "The image must be 5 MB or smaller.";
+            return;
+        }
+
+        var extension = Path.GetExtension(file.Name).ToLowerInvariant();
+
+        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
+
+        if (!allowedExtensions.Contains(extension))
+        {
+            ErrorMessage = "Please upload a JPG, JPEG, PNG, or GIF image.";
+            return;
+        }
+
+        var uploadsFolder = Path.Combine(
+            Environment.WebRootPath,
+            "uploads",
+            "profiles");
+
+        Directory.CreateDirectory(uploadsFolder);
+
+        var fileName = $"{Guid.NewGuid()}{extension}";
+        var filePath = Path.Combine(uploadsFolder, fileName);
+
+        await using var stream = file.OpenReadStream(MaxFileSize);
+        await using var fileStream = new FileStream(filePath, FileMode.Create);
+
+        await stream.CopyToAsync(fileStream);
+
+        var oldProfilePicture = user.ProfilePicture;
+
+        user.ProfilePicture = $"/uploads/profiles/{fileName}";
+
+        var result = await UserManager.UpdateAsync(user);
+
+        if (!result.Succeeded)
+        {
+            File.Delete(filePath);
+            ErrorMessage = "The profile picture could not be saved.";
+            return;
+        }
+
+        DeleteOldProfilePicture(oldProfilePicture);
+
+        ProfilePicture = user.ProfilePicture;
+        Message = "Profile picture updated.";
+    }
+
+    private void DeleteOldProfilePicture(string? oldProfilePicture)
+    {
+        if (string.IsNullOrWhiteSpace(oldProfilePicture))
+        {
+            return;
+        }
+
+        const string profileFolder = "/uploads/profiles/";
+
+        if (!oldProfilePicture.StartsWith(profileFolder, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var oldFileName = Path.GetFileName(oldProfilePicture);
+
+        if (string.IsNullOrWhiteSpace(oldFileName))
+        {
+            return;
+        }
+
+        var oldFilePath = Path.Combine(
+            Environment.WebRootPath,
+            "uploads",
+            "profiles",
+            oldFileName);
+
+        if (File.Exists(oldFilePath))
+        {
+            File.Delete(oldFilePath);
+        }
+    }
+}
