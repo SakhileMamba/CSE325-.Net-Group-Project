@@ -5,6 +5,7 @@
 @using SocialMediaApp.Data
 @using SocialMediaApp.Services
 @inject CommentService CommentService
+@inject LikeService LikeService
 @inject ILogger<PostDiscussion> Logger
 
 <PageTitle>Post Discussion</PageTitle>
@@ -27,6 +28,10 @@ else
         <div class="card-body">
             <p class="text-muted">@(post.User.UserName ?? "User") · @post.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</p>
             <p style="white-space: pre-wrap; overflow-wrap: anywhere;">@post.Content</p>
+            <button type="button" class="btn @(postLike.IsLikedByCurrentUser ? "btn-primary" : "btn-outline-primary")"
+                    disabled="@busy" @onclick="TogglePostLikeAsync">
+                @(postLike.IsLikedByCurrentUser ? "Unlike" : "Like") (@postLike.Count)
+            </button>
         </div>
     </article>
     <h2>Comments</h2>
@@ -52,7 +57,8 @@ else
     }
     @foreach (var comment in comments.Where(c => c.ParentCommentId is null))
     {
-        <ThreadComment @key="comment.Id" Comment="comment" Comments="comments" OnReply="StartReply" Disabled="busy" />
+        <ThreadComment @key="comment.Id" Comment="comment" Comments="comments" Likes="commentLikes"
+                       OnReply="StartReply" OnToggleLike="ToggleCommentLikeAsync" Disabled="busy" />
     }
 }
 
@@ -60,6 +66,8 @@ else
     [Parameter] public int PostId { get; set; }
     private Post? post;
     private List<Comment> comments = new();
+    private LikeSummary postLike = new(0, false);
+    private Dictionary<int, LikeSummary> commentLikes = new();
     private CommentInput input = new();
     private Comment? replyTo;
     private bool loading = true;
@@ -75,7 +83,12 @@ else
         await RunAsync(async () =>
         {
             post = await CommentService.GetPostAsync(PostId);
-            if (post is not null) comments = await CommentService.GetCommentsAsync(PostId);
+            if (post is not null)
+            {
+                comments = await CommentService.GetCommentsAsync(PostId);
+                postLike = await LikeService.GetPostLikeAsync(PostId) ?? new(0, false);
+                commentLikes = await LikeService.GetCommentLikesAsync(PostId);
+            }
         });
         loading = false;
     }
@@ -98,7 +111,27 @@ else
         await CommentService.AddAsync(PostId, input.Content, replyTo?.Id);
         CancelReply();
         comments = await CommentService.GetCommentsAsync(PostId);
+        commentLikes = await LikeService.GetCommentLikesAsync(PostId);
         message = "Your comment was posted.";
+    });
+
+    private Task TogglePostLikeAsync() => RunAsync(async () =>
+    {
+        var result = await LikeService.TogglePostLikeAsync(PostId);
+        if (result is null) post = null;
+        else postLike = result;
+    });
+
+    private Task ToggleCommentLikeAsync(Comment comment) => RunAsync(async () =>
+    {
+        var result = await LikeService.ToggleCommentLikeAsync(comment.Id);
+        if (result is null)
+        {
+            message = "This comment is no longer available.";
+            comments = await CommentService.GetCommentsAsync(PostId);
+            commentLikes = await LikeService.GetCommentLikesAsync(PostId);
+        }
+        else commentLikes[comment.Id] = result;
     });
 
     private async Task RunAsync(Func<Task> action)

@@ -7,10 +7,30 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 {
     public DbSet<Post> Posts => Set<Post>();
     public DbSet<Comment> Comments => Set<Comment>();
+    public DbSet<PostLike> PostLikes => Set<PostLike>();
+    public DbSet<CommentLike> CommentLikes => Set<CommentLike>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+
+        builder.Entity<PostLike>(like =>
+        {
+            like.HasKey(l => new { l.PostId, l.UserId });
+            like.HasOne(l => l.Post).WithMany().HasForeignKey(l => l.PostId)
+                .OnDelete(DeleteBehavior.Cascade);
+            like.HasOne(l => l.User).WithMany().HasForeignKey(l => l.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<CommentLike>(like =>
+        {
+            like.HasKey(l => new { l.CommentId, l.UserId });
+            like.HasOne(l => l.Comment).WithMany().HasForeignKey(l => l.CommentId)
+                .OnDelete(DeleteBehavior.Cascade);
+            like.HasOne(l => l.User).WithMany().HasForeignKey(l => l.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
 
         builder.Entity<Comment>(comment =>
         {
