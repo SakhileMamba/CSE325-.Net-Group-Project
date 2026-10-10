@@ -283,6 +283,21 @@ namespace SocialMediaApp.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SocialMediaApp.Data.CommentLike", b =>
+                {
+                    b.Property<int>("CommentId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("CommentId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("CommentLikes");
+                });
+
             modelBuilder.Entity("SocialMediaApp.Data.Post", b =>
                 {
                     b.Property<int>("Id")
@@ -309,6 +324,21 @@ namespace SocialMediaApp.Migrations
                         {
                             t.HasCheckConstraint("CK_Posts_Content", "length(trim(Content)) > 0 AND length(Content) <= 250");
                         });
+                });
+
+            modelBuilder.Entity("SocialMediaApp.Data.PostLike", b =>
+                {
+                    b.Property<int>("PostId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("PostId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PostLikes");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -439,6 +469,25 @@ namespace SocialMediaApp.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("SocialMediaApp.Data.CommentLike", b =>
+                {
+                    b.HasOne("SocialMediaApp.Data.Comment", "Comment")
+                        .WithMany()
+                        .HasForeignKey("CommentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SocialMediaApp.Data.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Comment");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SocialMediaApp.Data.Post", b =>
                 {
                     b.HasOne("SocialMediaApp.Data.ApplicationUser", "User")
@@ -446,6 +495,25 @@ namespace SocialMediaApp.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SocialMediaApp.Data.PostLike", b =>
+                {
+                    b.HasOne("SocialMediaApp.Data.Post", "Post")
+                        .WithMany()
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SocialMediaApp.Data.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Post");
 
                     b.Navigation("User");
                 });

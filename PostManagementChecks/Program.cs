@@ -129,6 +129,30 @@ try
     await Reject<ValidationException>(() => discussions.AddAsync(discussionPost.Id, " \t\n"), "Reject blank comment");
     await Reject<ValidationException>(() => discussions.AddAsync(discussionPost.Id, "", root.Id), "Reject blank reply");
     Check((await discussions.GetCommentsAsync(otherPost.Id)).Count == 0, "Comments isolated by post");
+
+    var likes = new LikeService(factory, auth);
+    var postLike = await likes.TogglePostLikeAsync(discussionPost.Id);
+    Check(postLike == new LikeSummary(1, true), "Like a post");
+    var commentLike = await likes.ToggleCommentLikeAsync(root.Id);
+    Check(commentLike == new LikeSummary(1, true), "Like a comment");
+    Check(await likes.GetPostLikeAsync(discussionPost.Id) == new LikeSummary(1, true),
+        "Track the current user's liked post");
+    var commentLikes = await likes.GetCommentLikesAsync(discussionPost.Id);
+    Check(commentLikes[root.Id] == new LikeSummary(1, true) &&
+        commentLikes[reply.Id] == new LikeSummary(0, false), "Track comment like counts and current-user state");
+    auth.SignIn("owner-a");
+    Check(await likes.GetPostLikeAsync(discussionPost.Id) == new LikeSummary(1, false),
+        "Post like state differs by user");
+    Check(await likes.TogglePostLikeAsync(discussionPost.Id) == new LikeSummary(2, true),
+        "A second user can like the same post");
+    Check(await likes.TogglePostLikeAsync(discussionPost.Id) == new LikeSummary(1, false), "Unlike a post");
+    Check(await likes.ToggleCommentLikeAsync(root.Id) == new LikeSummary(2, true),
+        "A second user can like the same comment");
+    Check(await likes.ToggleCommentLikeAsync(root.Id) == new LikeSummary(1, false), "Unlike a comment");
+    Check(await likes.TogglePostLikeAsync(int.MaxValue) is null, "Reject like for missing post");
+    Check(await likes.ToggleCommentLikeAsync(int.MaxValue) is null, "Reject like for missing comment");
+    Check(await likes.GetPostLikeAsync(int.MaxValue) is null, "Missing post has no like summary");
+    Check((await likes.GetCommentLikesAsync(otherPost.Id)).Count == 0, "Comment likes are isolated by post");
     auth.SignOut();
     await Reject<UnauthorizedAccessException>(() => discussions.AddAsync(discussionPost.Id, "Anonymous"),
         "Reject unauthenticated comment");
@@ -138,10 +162,21 @@ try
         "Reject unauthenticated discussion read");
     await Reject<UnauthorizedAccessException>(() => discussions.GetPostAsync(discussionPost.Id),
         "Reject unauthenticated post discussion read");
+    await Reject<UnauthorizedAccessException>(() => likes.TogglePostLikeAsync(discussionPost.Id),
+        "Reject unauthenticated post like");
+    await Reject<UnauthorizedAccessException>(() => likes.ToggleCommentLikeAsync(root.Id),
+        "Reject unauthenticated comment like");
+    await Reject<UnauthorizedAccessException>(() => likes.GetPostLikeAsync(discussionPost.Id),
+        "Reject unauthenticated like read");
     auth.SignIn("owner-a");
     Check(await service.DeleteAsync(discussionPost.Id), "Delete post containing nested discussion");
     Check((await discussions.GetCommentsAsync(discussionPost.Id)).Count == 0,
         "Deleting post removes all comments and nested replies");
+    await using (var db = factory.CreateDbContext())
+    {
+        Check(!await db.PostLikes.AnyAsync(l => l.PostId == discussionPost.Id) &&
+            !await db.CommentLikes.AnyAsync(), "Deleting content removes its likes");
+    }
 
     // Account deletion removes its comments but preserves other authors' replies.
     await discussions.AddAsync(otherPost.Id, "Author A comment");

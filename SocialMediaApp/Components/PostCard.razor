@@ -1,5 +1,8 @@
 @using System.Globalization
 @using SocialMediaApp.Data
+@using SocialMediaApp.Services
+@inject LikeService LikeService
+@inject ILogger<PostCard> Logger
 
 <article class="post">
     @if (!string.IsNullOrEmpty(Post.User.ProfilePicture))
@@ -18,12 +21,33 @@
                title="@($"{Post.CreatedAtUtc:yyyy-MM-dd HH:mm} UTC")">@TimeAgo(Post.CreatedAtUtc)</a>
         </div>
         <p class="post-content">@Post.Content</p>
+        <button type="button" class="btn btn-sm @(postLike.IsLikedByCurrentUser ? "btn-primary" : "btn-outline-primary") mb-2"
+                disabled="@busy" @onclick="ToggleLikeAsync">
+            @(postLike.IsLikedByCurrentUser ? "Unlike" : "Like") (@postLike.Count)
+        </button>
         <PostReplies PostId="Post.Id" />
     </div>
 </article>
 
 @code {
     [Parameter, EditorRequired] public Post Post { get; set; } = null!;
+    private LikeSummary postLike = new(0, false);
+    private bool busy;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        try { postLike = await LikeService.GetPostLikeAsync(Post.Id) ?? new(0, false); }
+        catch (Exception ex) { Logger.LogError(ex, "Loading likes failed for post {PostId}.", Post.Id); }
+    }
+
+    private async Task ToggleLikeAsync()
+    {
+        if (busy) return;
+        busy = true;
+        try { postLike = await LikeService.TogglePostLikeAsync(Post.Id) ?? new(0, false); }
+        catch (Exception ex) { Logger.LogError(ex, "Updating like failed for post {PostId}.", Post.Id); }
+        finally { busy = false; }
+    }
 
     private string DisplayName
     {

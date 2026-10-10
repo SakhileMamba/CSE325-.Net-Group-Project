@@ -1,6 +1,7 @@
 @using SocialMediaApp.Data
 @using SocialMediaApp.Services
 @inject CommentService CommentService
+@inject LikeService LikeService
 @inject ILogger<PostReplies> Logger
 
 <div class="d-flex gap-3">
@@ -25,8 +26,8 @@
     <div class="mt-2">
         @foreach (var comment in comments.Where(c => c.ParentCommentId is null))
         {
-            <ThreadComment @key="comment.Id" Comment="comment" Comments="comments" StartExpanded="false"
-                           OnReply="StartReply" ReplyingToId="replyTo?.Id">
+            <ThreadComment @key="comment.Id" Comment="comment" Comments="comments" Likes="commentLikes" StartExpanded="false"
+                           OnReply="StartReply" OnToggleLike="ToggleLikeAsync" ReplyingToId="replyTo?.Id">
                 <ReplyForm>
                     <ReplyBox PostId="PostId" ParentComment="replyTo" OnPosted="ReplyPostedAsync" OnCancel="CancelReply" />
                 </ReplyForm>
@@ -39,6 +40,7 @@
     [Parameter, EditorRequired] public int PostId { get; set; }
 
     private List<Comment> comments = new();
+    private Dictionary<int, LikeSummary> commentLikes = new();
     private bool showReplies;
     private bool replying;
     // null when replying to the post itself
@@ -68,11 +70,30 @@
 
     private async Task LoadAsync()
     {
-        try { comments = await CommentService.GetCommentsAsync(PostId); }
+        try
+        {
+            comments = await CommentService.GetCommentsAsync(PostId);
+            commentLikes = await LikeService.GetCommentLikesAsync(PostId);
+        }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Loading replies failed for post {PostId}.", PostId);
             message = "Unable to load replies.";
+        }
+    }
+
+    private async Task ToggleLikeAsync(Comment comment)
+    {
+        try
+        {
+            var result = await LikeService.ToggleCommentLikeAsync(comment.Id);
+            if (result is null) await LoadAsync();
+            else commentLikes[comment.Id] = result;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Updating like failed for comment {CommentId}.", comment.Id);
+            message = "Unable to update the like.";
         }
     }
 }
