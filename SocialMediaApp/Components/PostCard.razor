@@ -22,9 +22,13 @@
         </div>
         <p class="post-content">@Post.Content</p>
         <button type="button" class="btn btn-sm @(postLike.IsLikedByCurrentUser ? "btn-primary" : "btn-outline-primary") mb-2"
-                disabled="@busy" @onclick="ToggleLikeAsync">
+                disabled="@busy" aria-pressed="@postLike.IsLikedByCurrentUser" @onclick="ToggleLikeAsync">
             @(postLike.IsLikedByCurrentUser ? "Unlike" : "Like") (@postLike.Count)
         </button>
+        @if (message is not null)
+        {
+            <p class="text-danger small" role="alert">@message</p>
+        }
         <PostReplies PostId="Post.Id" />
     </div>
 </article>
@@ -33,19 +37,30 @@
     [Parameter, EditorRequired] public Post Post { get; set; } = null!;
     private LikeSummary postLike = new(0, false);
     private bool busy;
+    private string? message;
 
     protected override async Task OnParametersSetAsync()
     {
+        message = null;
         try { postLike = await LikeService.GetPostLikeAsync(Post.Id) ?? new(0, false); }
-        catch (Exception ex) { Logger.LogError(ex, "Loading likes failed for post {PostId}.", Post.Id); }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Loading likes failed for post {PostId}.", Post.Id);
+            message = "Unable to load likes.";
+        }
     }
 
     private async Task ToggleLikeAsync()
     {
         if (busy) return;
         busy = true;
+        message = null;
         try { postLike = await LikeService.TogglePostLikeAsync(Post.Id) ?? new(0, false); }
-        catch (Exception ex) { Logger.LogError(ex, "Updating like failed for post {PostId}.", Post.Id); }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Updating like failed for post {PostId}.", Post.Id);
+            message = "Unable to update the like. Please try again.";
+        }
         finally { busy = false; }
     }
 

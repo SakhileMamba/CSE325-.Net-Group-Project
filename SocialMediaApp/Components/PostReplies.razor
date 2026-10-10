@@ -5,17 +5,19 @@
 @inject ILogger<PostReplies> Logger
 
 <div class="d-flex gap-3">
-    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" @onclick="() => StartReply(null)">Reply</button>
+    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none"
+            aria-expanded="@(replying && replyTo is null)" @onclick="() => StartReply(null)">Reply</button>
     @if (comments.Count > 0)
     {
-        <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" @onclick="() => showReplies = !showReplies">
+        <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" aria-expanded="@showReplies"
+                aria-controls="@($"post-replies-{PostId}")" @onclick="() => showReplies = !showReplies">
             @(showReplies ? "Hide replies" : $"Show replies ({comments.Count})")
         </button>
     }
 </div>
 @if (message is not null)
 {
-    <p class="text-danger small mb-0">@message</p>
+    <p class="text-danger small mb-0" role="alert">@message</p>
 }
 @if (replying && replyTo is null)
 {
@@ -23,7 +25,7 @@
 }
 @if (showReplies)
 {
-    <div class="mt-2">
+    <div class="mt-2" id="@($"post-replies-{PostId}")">
         @foreach (var comment in comments.Where(c => c.ParentCommentId is null))
         {
             <ThreadComment @key="comment.Id" Comment="comment" Comments="comments" Likes="commentLikes" StartExpanded="false"

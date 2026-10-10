@@ -24,8 +24,8 @@
                 <hr />
                 <ValidationSummary class="text-danger" role="alert" />
                 <div class="form-floating mb-3">
-                    <InputText type="email" @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username webauthn" aria-required="true" placeholder="name@example.com" />
-                    <label for="Input.Email" class="form-label">Email</label>
+                    <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username webauthn" aria-required="true" placeholder="Email or username" />
+                    <label for="Input.Email" class="form-label">Email or username</label>
                     <ValidationMessage For="() => Input.Email" class="text-danger" />
                 </div>
                 <div class="form-floating mb-3">
@@ -100,8 +100,15 @@
                 return;
             }
 
-            // Identity persists failed attempts and temporarily locks repeated failures.
-            result = await SignInManager.PasswordSignInAsync(Input.Email.Trim(), Input.Password, Input.RememberMe, lockoutOnFailure: true);
+            // A profile can have a username that differs from its registration email.
+            // Resolve either identifier before asking Identity to verify the password.
+            var identifier = Input.Email.Trim();
+            var user = await UserManager.FindByEmailAsync(identifier)
+                ?? await UserManager.FindByNameAsync(identifier);
+            result = user is null
+                ? SignInResult.Failed
+                : await SignInManager.PasswordSignInAsync(
+                    user, Input.Password, Input.RememberMe, lockoutOnFailure: true);
         }
 
         if (result.Succeeded)
@@ -129,7 +136,7 @@
     private sealed class InputModel
     {
         [Required]
-        [EmailAddress]
+        [Display(Name = "Email or username")]
         public string Email { get; set; } = "";
 
         [Required]

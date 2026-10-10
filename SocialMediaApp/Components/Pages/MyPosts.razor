@@ -18,7 +18,7 @@
 
 <EditForm Model="input" OnValidSubmit="SaveAsync" FormName="post-editor" class="composer">
     <DataAnnotationsValidator />
-    <ValidationSummary class="text-danger" />
+    <ValidationSummary class="text-danger" role="alert" />
     <label for="post-content" class="visually-hidden">@(editingId is null ? "Create a post" : "Edit your post")</label>
     <InputTextArea id="post-content" class="form-control" @bind-Value="input.Content" maxlength="250" rows="3"
                    placeholder="@(editingId is null ? "What's happening?" : "Update your post")" disabled="@busy" />
@@ -36,11 +36,11 @@
 
 @if (posts is null)
 {
-    <p class="text-muted p-3">Loading posts...</p>
+    <p class="text-muted p-3" role="status">Loading posts...</p>
 }
 else if (posts.Count == 0)
 {
-    <p class="text-muted p-3">You have no posts yet.</p>
+    <p class="text-muted p-3" role="status">You have no posts yet.</p>
 }
 else
 {
@@ -60,7 +60,7 @@ else
                 <p class="post-content">@post.Content</p>
                 @if (deletingId == post.Id)
                 {
-                    <p class="text-danger small mb-2">Delete this post?</p>
+                    <p class="text-danger small mb-2" role="alert">Delete this post?</p>
                     <button class="btn btn-sm btn-danger rounded-pill" @onclick="() => DeleteAsync(post.Id)" disabled="@busy">Confirm delete</button>
                     <button class="btn btn-sm btn-link" @onclick="() => deletingId = null" disabled="@busy">Cancel</button>
                 }

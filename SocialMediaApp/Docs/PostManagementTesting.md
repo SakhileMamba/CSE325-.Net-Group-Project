@@ -6,9 +6,9 @@ Identity authentication, Bootstrap, and the application's SQLite database.
 ## Run locally
 
 From `SocialMediaApp`, run `dotnet ef database update` and `dotnet run`.
-Register an account and use the confirmation link displayed on the registration
-confirmation page before logging in. The application currently has no real email
-sender. Open **My Posts** from the navigation.
+Register an account, which signs you in immediately, and open **My Posts** from
+the navigation. Email confirmation is disabled because the application currently
+has no production email sender.
 
 ## Automated checks
 
@@ -40,7 +40,7 @@ Verified during implementation:
 ## Browser acceptance checks
 
 - [ ] Log out and visit `/my-posts`; verify redirection to login.
-- [ ] Register and confirm two accounts, A and B.
+- [ ] Register two accounts, A and B.
 - [ ] As A, create a post and verify its content and UTC creation time.
 - [ ] Create a 250-character post. Verify typing/pasting cannot exceed 250 characters.
 - [ ] Submit empty or whitespace-only content; verify it is rejected.
@@ -68,5 +68,5 @@ Verified during implementation:
   post operation disposes its own context to avoid sharing one for a long-lived
   Interactive Server connection.
 - The migration adds only `Posts`; the original Identity migration is preserved.
-- Feed, comments, likes, notifications, profiles, and interest filtering are
-  outside this feature.
+- The feed, comments, likes, profiles, interest filtering, and like notifications
+  integrate with posts but are documented and maintained as separate features.

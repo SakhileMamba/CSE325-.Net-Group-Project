@@ -52,4 +52,6 @@ returned HTTP 302 to login. The browser checks below remain manual.
 10. Open `/posts/2147483647`; verify a missing-post message rather than a crash.
 11. As the post owner, delete the post from My Posts; its discussion becomes unavailable.
 
-No feed, likes, notifications, profiles, or interest filtering are added.
+Comments are integrated into the feed and discussion pages, and comments can be
+liked. A like from another user creates an in-app notification for the comment
+author. Profiles and interest filtering remain separate features.

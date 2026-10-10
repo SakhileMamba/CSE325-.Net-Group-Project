@@ -6,12 +6,13 @@
 
 <EditForm Model="input" OnValidSubmit="SubmitAsync" class="my-2">
     <DataAnnotationsValidator />
-    <ValidationSummary class="text-danger small" />
+    <ValidationSummary class="text-danger small" role="alert" />
     @if (message is not null)
     {
-        <p class="text-danger small mb-1">@message</p>
+        <p class="text-danger small mb-1" role="alert">@message</p>
     }
     <InputTextArea @ref="textArea" class="form-control mb-2" @bind-Value="input.Content" rows="2" disabled="@busy"
+                   aria-label="@(ParentComment is null ? "Reply to post" : $"Reply to {ParentComment.User.UserName}")"
                    placeholder="@(ParentComment is null ? "Post your reply" : $"Reply to {ParentComment.User.UserName}")" />
     <button type="submit" class="btn btn-primary btn-sm rounded-pill px-3" disabled="@busy">Reply</button>
     <button type="button" class="btn btn-link btn-sm" @onclick="OnCancel" disabled="@busy">Cancel</button>

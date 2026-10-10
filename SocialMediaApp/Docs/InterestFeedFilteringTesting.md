@@ -33,7 +33,7 @@ Tested with a separate temporary database:
 - Post a reply from the filtered feed; switch to All posts and verify both posts and the saved reply.
 - Change the saved interest to `Astronomy`; return to Home and verify the new value and the no-results message.
 
-Existing profile validation can prevent saving a newly registered account until its email-style username is changed to a valid username, and can reject a blank phone field. Valid test values were used; this feature does not change that unrelated validation. Likes are not implemented in the current project and could not be tested. Existing author/discussion links and PostCard remain unchanged; existing post/comment regression checks pass.
+Existing profile validation can prevent saving a newly registered account until its email-style username is changed to a valid username, and can reject a blank phone field. Valid test values were used; this feature does not change that unrelated validation. Existing likes, author/discussion links, and the shared `PostCard` remain available while filtering; existing post, comment, and like regression checks pass.
 
 ## Collaboration boundaries
 

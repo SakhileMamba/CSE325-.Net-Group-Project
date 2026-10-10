@@ -6,14 +6,16 @@
     <p style="white-space: pre-wrap; overflow-wrap: anywhere;">@Comment.Content</p>
     @{ var like = Likes.GetValueOrDefault(Comment.Id, new LikeSummary(0, false)); }
     <button type="button" class="btn btn-sm @(like.IsLikedByCurrentUser ? "btn-primary" : "btn-outline-primary") me-2"
-            disabled="@Disabled" @onclick="() => OnToggleLike.InvokeAsync(Comment)">
+            disabled="@Disabled" aria-pressed="@like.IsLikedByCurrentUser" @onclick="() => OnToggleLike.InvokeAsync(Comment)">
         @(like.IsLikedByCurrentUser ? "Unlike" : "Like") (@like.Count)
     </button>
     <button type="button" class="btn btn-sm btn-outline-primary" disabled="@Disabled"
+            aria-expanded="@(ReplyingToId == Comment.Id)"
             @onclick="() => OnReply.InvokeAsync(Comment)">Reply</button>
     @if (replies.Count > 0)
     {
-        <button type="button" class="btn btn-sm btn-link" @onclick="() => showReplies = !showReplies">
+        <button type="button" class="btn btn-sm btn-link" aria-expanded="@showReplies"
+                aria-controls="@($"comment-replies-{Comment.Id}")" @onclick="() => showReplies = !showReplies">
             @(showReplies ? "Hide replies" : $"Show replies ({replies.Count})")
         </button>
     }
@@ -24,12 +26,14 @@
 }
 @if (showReplies)
 {
-    @foreach (var reply in replies)
-    {
-        <ThreadComment @key="reply.Id" Comment="reply" Comments="Comments" Likes="Likes" Depth="@(Depth + 1)"
-                       OnReply="OnReply" OnToggleLike="OnToggleLike" Disabled="Disabled" StartExpanded="StartExpanded"
-                       ReplyingToId="ReplyingToId" ReplyForm="ReplyForm" />
-    }
+    <div id="@($"comment-replies-{Comment.Id}")">
+        @foreach (var reply in replies)
+        {
+            <ThreadComment @key="reply.Id" Comment="reply" Comments="Comments" Likes="Likes" Depth="@(Depth + 1)"
+                           OnReply="OnReply" OnToggleLike="OnToggleLike" Disabled="Disabled" StartExpanded="StartExpanded"
+                           ReplyingToId="ReplyingToId" ReplyForm="ReplyForm" />
+        }
+    </div>
 }
 
 @code {

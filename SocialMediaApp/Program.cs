@@ -30,6 +30,7 @@ builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
 builder.Services.AddScoped<PostService>();
 builder.Services.AddScoped<CommentService>();
 builder.Services.AddScoped<LikeService>();
+builder.Services.AddScoped<NotificationService>();
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddIdentityCore<ApplicationUser>(options =>

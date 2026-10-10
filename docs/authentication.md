@@ -10,7 +10,7 @@ ASPNETCORE_ENVIRONMENT=Development dotnet run --project SocialMediaApp
 
 Open the local URL printed by the app. Development startup applies the checked-in Identity migration to `SocialMediaApp/Data/app.db`. Register with an email address and a password of 12–100 characters containing uppercase, lowercase, a digit, and a symbol. Confirm the password. Successful registration signs you in and opens **My account**. Use the navigation to log out, then log in with the same email and password. **Remember me** persists the login cookie across browser sessions; leave it unchecked on shared devices. Five failed password attempts lock the account for 15 minutes.
 
-This feature uses ASP.NET Core Identity password hashing and protected authentication cookies. Account forms render on the server and include antiforgery protection. Passwords are never stored as plain text. Email addresses are unique; login failures use a generic message. Return URLs must remain within the app.
+This feature uses ASP.NET Core Identity password hashing and protected authentication cookies. Account forms render on the server and include antiforgery protection. Passwords are never stored as plain text. Email addresses are unique, and users can log in with either their email or their current username. Login failures use a generic message. Return URLs must remain within the app.
 
 Email ownership is not verified in this feature. The existing template email sender is a no-op. Password recovery and verification need a real email provider before the team advertises them; they are not linked from the login form. Registration deliberately signs in immediately. A future verification feature must update registration to send confirmation and enable `RequireConfirmedAccount` together.
 

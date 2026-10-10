@@ -9,7 +9,7 @@
 
     <EditForm Model="input" OnValidSubmit="CreateAsync" FormName="feed-post" class="composer">
         <DataAnnotationsValidator />
-        <ValidationSummary class="text-danger" />
+        <ValidationSummary class="text-danger" role="alert" />
         <InputTextArea class="form-control" @bind-Value="input.Content" maxlength="250" rows="3"
                        placeholder="What's happening?" aria-label="Write a post" disabled="@busy" />
         <div class="composer-footer">
@@ -38,7 +38,7 @@
 
     @if (posts is null)
     {
-        <p class="text-muted p-3">Loading posts...</p>
+        <p class="text-muted p-3" role="status">Loading posts...</p>
     }
     else if (posts.Count == 0)
     {
