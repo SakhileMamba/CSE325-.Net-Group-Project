@@ -63,9 +63,11 @@
                 <InputText @bind-Value="Input.Interests"
                            id="Input.Interests"
                            class="form-control"
-                           placeholder="Enter your interests" />
+                           placeholder="Music, hiking, technology"
+                           aria-describedby="interests-help" />
                 <label for="Input.Interests" class="form-label">Interests</label>
                 <ValidationMessage For="() => Input.Interests" class="text-danger" />
+                <p id="interests-help" class="form-text">Enter one or more interests separated by commas. My interests in the feed matches these keywords in post text.</p>
             </div>
 
             <div class="form-floating mb-3">
