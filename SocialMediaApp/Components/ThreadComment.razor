@@ -12,12 +12,16 @@
         </button>
     }
 </article>
+@if (ReplyingToId == Comment.Id)
+{
+    <div class="ps-3" style="margin-left: @(Math.Min(Depth, 6))rem;">@ReplyForm</div>
+}
 @if (showReplies)
 {
     @foreach (var reply in replies)
     {
         <ThreadComment @key="reply.Id" Comment="reply" Comments="Comments" Depth="@(Depth + 1)" OnReply="OnReply"
-                       Disabled="Disabled" StartExpanded="StartExpanded" />
+                       Disabled="Disabled" StartExpanded="StartExpanded" ReplyingToId="ReplyingToId" ReplyForm="ReplyForm" />
     }
 }
 
@@ -27,8 +31,11 @@
     [Parameter] public int Depth { get; set; }
     [Parameter] public bool Disabled { get; set; }
     [Parameter] public EventCallback<Comment> OnReply { get; set; }
-    // Whether replies start open. The discussion page opens them; the home feed starts folded.
+    // Whether replies start open. The discussion page opens them; the feed and My Posts start folded.
     [Parameter] public bool StartExpanded { get; set; } = true;
+    // For inline replies: ReplyForm is shown under the comment whose Id is ReplyingToId.
+    [Parameter] public int? ReplyingToId { get; set; }
+    [Parameter] public RenderFragment? ReplyForm { get; set; }
 
     private bool showReplies;
     private List<Comment> replies = new();
@@ -36,5 +43,9 @@
     protected override void OnInitialized() => showReplies = StartExpanded;
 
     protected override void OnParametersSet()
-        => replies = Comments.Where(c => c.ParentCommentId == Comment.Id).ToList();
+    {
+        replies = Comments.Where(c => c.ParentCommentId == Comment.Id).ToList();
+        // Open the replies of the comment being answered so the new reply shows up under it.
+        if (ReplyingToId == Comment.Id) showReplies = true;
+    }
 }

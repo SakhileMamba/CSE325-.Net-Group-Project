@@ -114,12 +114,32 @@
         display: none;
     }
 
-    .nav-scrollable {
-        /* Never collapse the sidebar for wide screens */
-        display: block;
+    .top-row {
+        background-color: transparent;
+    }
 
-        /* Allow sidebar to scroll for tall menus */
-        height: calc(100vh - 3.5rem);
-        overflow-y: auto;
+    .nav-scrollable {
+        /* Never collapse the menu for wide screens */
+        display: block;
+        flex: 1;
+    }
+
+    /* Links sit in a row on the right instead of a column. */
+    .nav-scrollable .nav {
+        flex-direction: row !important;
+        justify-content: flex-end;
+        padding-right: 1rem;
+    }
+
+    .nav-item,
+    .nav-item:first-of-type,
+    .nav-item:last-of-type {
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+
+    .nav-item ::deep .nav-link {
+        height: 2.5rem;
+        white-space: nowrap;
     }
 }

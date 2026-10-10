@@ -1,6 +1,5 @@
 @using System.Globalization
 @using SocialMediaApp.Data
-@inject NavigationManager Navigation
 
 <article class="post">
     @if (!string.IsNullOrEmpty(Post.User.ProfilePicture))
@@ -19,34 +18,12 @@
                title="@($"{Post.CreatedAtUtc:yyyy-MM-dd HH:mm} UTC")">@TimeAgo(Post.CreatedAtUtc)</a>
         </div>
         <p class="post-content">@Post.Content</p>
-        <a class="post-action" href="@($"posts/{Post.Id}")">Reply</a>
-        @if (Comments.Count > 0)
-        {
-            <button type="button" class="post-action post-toggle" @onclick="() => showReplies = !showReplies">
-                @(showReplies ? "Hide replies" : $"Show replies ({Comments.Count})")
-            </button>
-        }
-        @if (showReplies)
-        {
-            <div class="mt-2">
-                @foreach (var comment in Comments.Where(c => c.ParentCommentId is null))
-                {
-                    <ThreadComment @key="comment.Id" Comment="comment" Comments="Comments" StartExpanded="false"
-                                   OnReply="OpenDiscussion" />
-                }
-            </div>
-        }
+        <PostReplies PostId="Post.Id" />
     </div>
 </article>
 
 @code {
     [Parameter, EditorRequired] public Post Post { get; set; } = null!;
-    // Every comment and reply on this post.
-    [Parameter] public IReadOnlyList<Comment> Comments { get; set; } = Array.Empty<Comment>();
-
-    private bool showReplies;
-
-    private void OpenDiscussion(Comment comment) => Navigation.NavigateTo($"posts/{Post.Id}");
 
     private string DisplayName
     {

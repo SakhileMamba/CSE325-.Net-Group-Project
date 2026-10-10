@@ -1,0 +1,100 @@
+@* The signed-in home feed: a composer, every user's posts newest first, and Show more. *@
+@using System.ComponentModel.DataAnnotations
+@using SocialMediaApp.Data
+@using SocialMediaApp.Services
+@inject PostService PostService
+@inject ILogger<HomeFeed> Logger
+
+<div class="feed">
+    <h1 class="feed-header">Home</h1>
+
+    <EditForm Model="input" OnValidSubmit="CreateAsync" FormName="feed-post" class="composer">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="text-danger" />
+        <InputTextArea class="form-control" @bind-Value="input.Content" maxlength="250" rows="3"
+                       placeholder="What's happening?" aria-label="Write a post" disabled="@busy" />
+        <div class="composer-footer">
+            <span class="form-text">Maximum 250 characters.</span>
+            <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold" disabled="@busy">Post</button>
+        </div>
+    </EditForm>
+
+    @if (message is not null)
+    {
+        <div class="alert alert-info m-3" role="status">@message</div>
+    }
+
+    @if (posts is null)
+    {
+        <p class="text-muted p-3">Loading posts...</p>
+    }
+    else if (posts.Count == 0)
+    {
+        <p class="text-muted p-3">No posts yet. Be the first to share something!</p>
+    }
+    else
+    {
+        @foreach (var post in posts)
+        {
+            <PostCard @key="post.Id" Post="post" />
+        }
+        @if (hasMore)
+        {
+            <button class="btn btn-link w-100 py-3" @onclick="LoadMoreAsync" disabled="@busy">Show more posts</button>
+        }
+    }
+</div>
+
+@code {
+    private const int PageSize = 20;
+    private List<Post>? posts;
+    private PostInput input = new();
+    private bool hasMore;
+    private bool busy;
+    private string? message;
+
+    protected override Task OnInitializedAsync() => RunAsync(LoadNewestAsync);
+
+    private async Task LoadNewestAsync()
+    {
+        posts = await PostService.GetFeedAsync(pageSize: PageSize);
+        hasMore = posts.Count == PageSize;
+    }
+
+    private Task CreateAsync() => RunAsync(async () =>
+    {
+        await PostService.CreateAsync(input.Content);
+        input = new();
+        await LoadNewestAsync();
+    });
+
+    private Task LoadMoreAsync() => RunAsync(async () =>
+    {
+        var older = await PostService.GetFeedAsync(posts![^1].Id, PageSize);
+        posts.AddRange(older);
+        hasMore = older.Count == PageSize;
+    });
+
+    private async Task RunAsync(Func<Task> action)
+    {
+        if (busy) return;
+        busy = true;
+        message = null;
+        try { await action(); }
+        catch (ValidationException ex) { message = ex.Message; }
+        catch (UnauthorizedAccessException ex) { message = ex.Message; }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Home feed operation failed.");
+            message = "Unable to load or update the feed. Please try again.";
+        }
+        finally { busy = false; }
+    }
+
+    private sealed class PostInput
+    {
+        [Required(ErrorMessage = "Please enter post content.")]
+        [StringLength(250, ErrorMessage = "Posts cannot exceed 250 characters.")]
+        public string Content { get; set; } = "";
+    }
+}

@@ -1,0 +1,64 @@
+@using System.ComponentModel.DataAnnotations
+@using SocialMediaApp.Data
+@using SocialMediaApp.Services
+@inject CommentService CommentService
+@inject ILogger<ReplyBox> Logger
+
+<EditForm Model="input" OnValidSubmit="SubmitAsync" class="my-2">
+    <DataAnnotationsValidator />
+    <ValidationSummary class="text-danger small" />
+    @if (message is not null)
+    {
+        <p class="text-danger small mb-1">@message</p>
+    }
+    <InputTextArea @ref="textArea" class="form-control mb-2" @bind-Value="input.Content" rows="2" disabled="@busy"
+                   placeholder="@(ParentComment is null ? "Post your reply" : $"Reply to {ParentComment.User.UserName}")" />
+    <button type="submit" class="btn btn-primary btn-sm rounded-pill px-3" disabled="@busy">Reply</button>
+    <button type="button" class="btn btn-link btn-sm" @onclick="OnCancel" disabled="@busy">Cancel</button>
+</EditForm>
+
+@code {
+    [Parameter, EditorRequired] public int PostId { get; set; }
+    // The comment being replied to, or null for a reply to the post itself.
+    [Parameter] public Comment? ParentComment { get; set; }
+    [Parameter] public EventCallback OnPosted { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private ReplyInput input = new();
+    private InputTextArea? textArea;
+    private bool busy;
+    private string? message;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && textArea?.Element is ElementReference element)
+            await element.FocusAsync();
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (busy) return;
+        busy = true;
+        message = null;
+        try
+        {
+            await CommentService.AddAsync(PostId, input.Content, ParentComment?.Id);
+            input = new();
+            await OnPosted.InvokeAsync();
+        }
+        catch (ValidationException ex) { message = ex.Message; }
+        catch (UnauthorizedAccessException ex) { message = ex.Message; }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Reply failed for post {PostId}.", PostId);
+            message = "Unable to post your reply. Please try again.";
+        }
+        finally { busy = false; }
+    }
+
+    private sealed class ReplyInput
+    {
+        [Required(ErrorMessage = "Please enter reply content.")]
+        public string Content { get; set; } = "";
+    }
+}

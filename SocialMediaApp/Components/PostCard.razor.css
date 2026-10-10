@@ -39,8 +39,7 @@
     overflow-wrap: anywhere;
 }
 
-.post-time,
-.post-action {
+.post-time {
     color: #536471;
     text-decoration: none;
 }
@@ -54,19 +53,4 @@
     margin: 0.125rem 0 0.5rem;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
-}
-
-.post-action {
-    font-size: 0.875rem;
-}
-
-.post-action:hover {
-    color: #1b6ec2;
-}
-
-.post-toggle {
-    margin-left: 1rem;
-    padding: 0;
-    border: none;
-    background: none;
 }

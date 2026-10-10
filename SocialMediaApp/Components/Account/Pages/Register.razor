@@ -79,7 +79,7 @@
         Logger.LogInformation("User created a new account with password.");
 
         await SignInManager.SignInAsync(user, isPersistent: false);
-        RedirectManager.RedirectTo(ReturnUrl ?? "account");
+        RedirectManager.RedirectTo(ReturnUrl ?? "");
     }
 
     private ApplicationUser CreateUser()

@@ -129,9 +129,6 @@ try
     await Reject<ValidationException>(() => discussions.AddAsync(discussionPost.Id, " \t\n"), "Reject blank comment");
     await Reject<ValidationException>(() => discussions.AddAsync(discussionPost.Id, "", root.Id), "Reject blank reply");
     Check((await discussions.GetCommentsAsync(otherPost.Id)).Count == 0, "Comments isolated by post");
-    var feedComments = await discussions.GetCommentsForPostsAsync([discussionPost.Id, otherPost.Id]);
-    Check(feedComments.Count == 4 && feedComments.All(c => c.PostId == discussionPost.Id && c.User is not null),
-        "Load comments for several feed posts at once");
     auth.SignOut();
     await Reject<UnauthorizedAccessException>(() => discussions.AddAsync(discussionPost.Id, "Anonymous"),
         "Reject unauthenticated comment");
@@ -141,8 +138,6 @@ try
         "Reject unauthenticated discussion read");
     await Reject<UnauthorizedAccessException>(() => discussions.GetPostAsync(discussionPost.Id),
         "Reject unauthenticated post discussion read");
-    await Reject<UnauthorizedAccessException>(() => discussions.GetCommentsForPostsAsync([discussionPost.Id]),
-        "Reject unauthenticated feed comments read");
     auth.SignIn("owner-a");
     Check(await service.DeleteAsync(discussionPost.Id), "Delete post containing nested discussion");
     Check((await discussions.GetCommentsAsync(discussionPost.Id)).Count == 0,
