@@ -1,0 +1,78 @@
+@using SocialMediaApp.Data
+@using SocialMediaApp.Services
+@inject CommentService CommentService
+@inject ILogger<PostReplies> Logger
+
+<div class="d-flex gap-3">
+    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" @onclick="() => StartReply(null)">Reply</button>
+    @if (comments.Count > 0)
+    {
+        <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" @onclick="() => showReplies = !showReplies">
+            @(showReplies ? "Hide replies" : $"Show replies ({comments.Count})")
+        </button>
+    }
+</div>
+@if (message is not null)
+{
+    <p class="text-danger small mb-0">@message</p>
+}
+@if (replying && replyTo is null)
+{
+    <ReplyBox PostId="PostId" OnPosted="ReplyPostedAsync" OnCancel="CancelReply" />
+}
+@if (showReplies)
+{
+    <div class="mt-2">
+        @foreach (var comment in comments.Where(c => c.ParentCommentId is null))
+        {
+            <ThreadComment @key="comment.Id" Comment="comment" Comments="comments" StartExpanded="false"
+                           OnReply="StartReply" ReplyingToId="replyTo?.Id">
+                <ReplyForm>
+                    <ReplyBox PostId="PostId" ParentComment="replyTo" OnPosted="ReplyPostedAsync" OnCancel="CancelReply" />
+                </ReplyForm>
+            </ThreadComment>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public int PostId { get; set; }
+
+    private List<Comment> comments = new();
+    private bool showReplies;
+    private bool replying;
+    // null when replying to the post itself
+    private Comment? replyTo;
+    private string? message;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private void StartReply(Comment? comment)
+    {
+        replyTo = comment;
+        replying = true;
+    }
+
+    private void CancelReply()
+    {
+        replyTo = null;
+        replying = false;
+    }
+
+    private async Task ReplyPostedAsync()
+    {
+        CancelReply();
+        await LoadAsync();
+        showReplies = true;
+    }
+
+    private async Task LoadAsync()
+    {
+        try { comments = await CommentService.GetCommentsAsync(PostId); }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Loading replies failed for post {PostId}.", PostId);
+            message = "Unable to load replies.";
+        }
+    }
+}

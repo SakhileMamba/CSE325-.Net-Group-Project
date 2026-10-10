@@ -25,7 +25,7 @@ internal sealed class IdentityRedirectManager(NavigationManager navigationManage
             || !new Uri(navigationManager.BaseUri).IsBaseOf(destination)
             || uri.Contains('\\'))
         {
-            uri = "account";
+            uri = "";
         }
         else
         {

@@ -35,6 +35,16 @@ public class PostService(
             .OrderByDescending(p => p.CreatedAtUtc).ThenByDescending(p => p.Id).ToListAsync();
     }
 
+    // All users' posts, newest first. Pass the oldest Id shown to get the next page.
+    public async Task<List<Post>> GetFeedAsync(int? beforeId = null, int pageSize = 20)
+    {
+        await GetUserIdAsync();
+        await using var db = await contextFactory.CreateDbContextAsync();
+        IQueryable<Post> query = db.Posts.AsNoTracking().Include(p => p.User);
+        if (beforeId is int id) query = query.Where(p => p.Id < id);
+        return await query.OrderByDescending(p => p.Id).Take(pageSize).ToListAsync();
+    }
+
     public async Task CreateAsync(string content)
     {
         var userId = await GetUserIdAsync();

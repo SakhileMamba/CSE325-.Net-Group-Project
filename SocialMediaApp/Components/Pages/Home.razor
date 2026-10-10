@@ -1,7 +1,27 @@
-﻿@page "/"
+@page "/"
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
-
-Welcome to your new app.
+<AuthorizeView>
+    <Authorized>
+        <HomeFeed @rendermode="InteractiveServer" />
+    </Authorized>
+    <NotAuthorized>
+        <section class="welcome">
+            <h1>Welcome to SocialMediaApp</h1>
+            <p class="lead">
+                Share ideas, feelings, and more with people everywhere, in 250 characters or less.
+            </p>
+            <ul class="welcome-points">
+                <li>See what everyone is posting in one global feed.</li>
+                <li>Reply to posts and to other replies in threaded discussions.</li>
+                <li>Build a profile with a photo, a bio, and your interests.</li>
+            </ul>
+            <p>Create a free account to start reading and posting in the feed.</p>
+            <div class="welcome-actions">
+                <a class="btn btn-primary btn-lg rounded-pill px-4" href="Account/Register">Get started</a>
+                <a class="btn btn-outline-primary btn-lg rounded-pill px-4" href="Account/Login">Log in</a>
+            </div>
+        </section>
+    </NotAuthorized>
+</AuthorizeView>
