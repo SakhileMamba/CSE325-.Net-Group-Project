@@ -1,0 +1,107 @@
+@page "/notifications"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@using SocialMediaApp.Data
+@using SocialMediaApp.Services
+@inject NotificationService NotificationService
+@inject ILogger<Notifications> Logger
+
+<PageTitle>Notifications</PageTitle>
+
+<div class="notifications-feed">
+    <header class="notifications-header">
+        <div>
+            <h1>Notifications</h1>
+            <p>Likes on your posts and comments.</p>
+        </div>
+        @if (items?.Any(item => !item.IsRead) == true)
+        {
+            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill"
+                    disabled="@busy" @onclick="MarkAllReadAsync">Mark all read</button>
+        }
+    </header>
+
+    @if (message is not null)
+    {
+        <div class="alert alert-danger m-3" role="alert">@message</div>
+    }
+    @if (items is null)
+    {
+        <p class="text-muted p-3" role="status">Loading notifications...</p>
+    }
+    else if (items.Count == 0)
+    {
+        <p class="text-muted p-3" role="status">You have no notifications yet.</p>
+    }
+    else
+    {
+        @foreach (var item in items)
+        {
+            <article class="notification-item @(item.IsRead ? "" : "unread")" @key="item.Id">
+                @if (!string.IsNullOrEmpty(item.ActorProfilePicture))
+                {
+                    <img class="notification-avatar" src="@item.ActorProfilePicture" alt="" />
+                }
+                else
+                {
+                    <div class="notification-avatar avatar-initial" aria-hidden="true">@Initial(item)</div>
+                }
+                <div>
+                    <p class="mb-1">
+                        <strong>@ActorName(item)</strong>
+                        liked your @(item.Kind == NotificationKinds.PostLike ? "post" : "comment").
+                    </p>
+                    <a href="@($"posts/{item.PostId}")">View discussion</a>
+                    <span class="text-muted"> · @item.CreatedAtUtc.ToString("MMM d, yyyy HH:mm") UTC</span>
+                </div>
+            </article>
+        }
+    }
+</div>
+
+@code {
+    private List<NotificationItem>? items;
+    private bool busy;
+    private string? message;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        try { items = await NotificationService.GetMineAsync(); }
+        catch (UnauthorizedAccessException ex) { message = ex.Message; items = []; }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Loading notifications failed.");
+            message = "Unable to load notifications. Please try again.";
+            items = [];
+        }
+    }
+
+    private async Task MarkAllReadAsync()
+    {
+        if (busy) return;
+        busy = true;
+        message = null;
+        try
+        {
+            await NotificationService.MarkAllReadAsync();
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Marking notifications as read failed.");
+            message = "Unable to update notifications. Please try again.";
+        }
+        finally { busy = false; }
+    }
+
+    private static string ActorName(NotificationItem item) =>
+        string.IsNullOrWhiteSpace(item.ActorDisplayName) ? item.ActorUsername : item.ActorDisplayName;
+
+    private static char Initial(NotificationItem item)
+    {
+        var name = ActorName(item);
+        return name.Length == 0 ? '?' : char.ToUpperInvariant(name[0]);
+    }
+}

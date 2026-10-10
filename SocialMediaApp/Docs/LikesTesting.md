@@ -36,4 +36,7 @@ cascade deletion. They run against a disposable SQLite database.
    both users while each account keeps its own Like/Unlike state.
 8. Delete a liked post and confirm its discussion is unavailable.
 
-The feature does not add a feed, notification, or separate liked-content page.
+Like controls are shared by the home feed, post discussion, threaded comments,
+and reusable post cards. The `/liked` page lists the signed-in user's liked posts
+and comments. Likes by another user also create an in-app notification for the
+content owner; notification behavior is documented in `NotificationsTesting.md`.

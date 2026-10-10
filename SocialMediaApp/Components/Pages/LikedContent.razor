@@ -15,11 +15,12 @@
 
 @if (message is not null)
 {
-    <div class="alert alert-info m-3" role="status">@message</div>
+    <div class="alert @(messageIsError ? "alert-danger" : "alert-info") m-3"
+         role="@(messageIsError ? "alert" : "status")">@message</div>
 }
 @if (loading)
 {
-    <p class="text-muted p-3">Loading liked content...</p>
+    <p class="text-muted p-3" role="status">Loading liked content...</p>
 }
 else
 {
@@ -27,7 +28,7 @@ else
         <h2 class="section-header">Liked Posts</h2>
         @if (posts.Count == 0)
         {
-            <p class="text-muted p-3">You have not liked any posts yet.</p>
+            <p class="text-muted p-3" role="status">You have not liked any posts yet.</p>
         }
         @foreach (var post in posts)
         {
@@ -48,7 +49,8 @@ else
                     <p class="post-content">@post.Content</p>
                     <div class="post-actions">
                         <a class="action-link" href="@($"posts/{post.PostId}")">Open discussion</a>
-                        <button type="button" class="like-button" disabled="@busy" @onclick="() => UnlikePostAsync(post.PostId)">
+                        <button type="button" class="like-button" disabled="@busy" aria-pressed="true"
+                                @onclick="() => UnlikePostAsync(post.PostId)">
                             <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 14s6-3.33 6-8.5A3.5 3.5 0 0 0 8 3.05 3.5 3.5 0 0 0 2 5.5C2 10.67 8 14 8 14z" /></svg>
                             Unlike (@post.LikeCount)
                         </button>
@@ -62,7 +64,7 @@ else
         <h2 class="section-header">Liked Comments</h2>
         @if (comments.Count == 0)
         {
-            <p class="text-muted p-3">You have not liked any comments yet.</p>
+            <p class="text-muted p-3" role="status">You have not liked any comments yet.</p>
         }
         @foreach (var comment in comments)
         {
@@ -84,7 +86,8 @@ else
                     <p class="context-line">Reply to: @comment.PostContent</p>
                     <div class="post-actions">
                         <a class="action-link" href="@($"posts/{comment.PostId}")">Open discussion</a>
-                        <button type="button" class="like-button" disabled="@busy" @onclick="() => UnlikeCommentAsync(comment.CommentId)">
+                        <button type="button" class="like-button" disabled="@busy" aria-pressed="true"
+                                @onclick="() => UnlikeCommentAsync(comment.CommentId)">
                             <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 14s6-3.33 6-8.5A3.5 3.5 0 0 0 8 3.05 3.5 3.5 0 0 0 2 5.5C2 10.67 8 14 8 14z" /></svg>
                             Unlike (@comment.LikeCount)
                         </button>
@@ -102,11 +105,19 @@ else
     private bool loading = true;
     private bool busy;
     private string? message;
+    private bool messageIsError;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadAsync();
-        loading = false;
+        try { await LoadAsync(); }
+        catch (UnauthorizedAccessException ex) { message = ex.Message; messageIsError = true; }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Loading liked content failed.");
+            message = "Unable to load your liked content. Please try again.";
+            messageIsError = true;
+        }
+        finally { loading = false; }
     }
 
     private async Task LoadAsync()
@@ -120,6 +131,7 @@ else
         await LikeService.TogglePostLikeAsync(postId);
         await LoadAsync();
         message = "Post removed from your liked content.";
+        messageIsError = false;
     });
 
     private Task UnlikeCommentAsync(int commentId) => RunAsync(async () =>
@@ -127,6 +139,7 @@ else
         await LikeService.ToggleCommentLikeAsync(commentId);
         await LoadAsync();
         message = "Comment removed from your liked content.";
+        messageIsError = false;
     });
 
     private async Task RunAsync(Func<Task> action)
@@ -135,11 +148,12 @@ else
         busy = true;
         message = null;
         try { await action(); }
-        catch (UnauthorizedAccessException ex) { message = ex.Message; }
+        catch (UnauthorizedAccessException ex) { message = ex.Message; messageIsError = true; }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Liked-content operation failed.");
             message = "Unable to update your liked content. Please try again.";
+            messageIsError = true;
         }
         finally { busy = false; }
     }

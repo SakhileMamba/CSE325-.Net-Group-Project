@@ -16,11 +16,11 @@
 }
 @if (loading)
 {
-    <p>Loading discussion...</p>
+    <p role="status">Loading discussion...</p>
 }
 else if (post is null)
 {
-    <p>The post is unavailable.</p>
+    <div class="alert alert-warning" role="alert">The post is unavailable.</div>
 }
 else
 {
@@ -29,7 +29,7 @@ else
             <p class="text-muted">@(post.User.UserName ?? "User") · @post.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</p>
             <p style="white-space: pre-wrap; overflow-wrap: anywhere;">@post.Content</p>
             <button type="button" class="btn @(postLike.IsLikedByCurrentUser ? "btn-primary" : "btn-outline-primary")"
-                    disabled="@busy" @onclick="TogglePostLikeAsync">
+                    disabled="@busy" aria-pressed="@postLike.IsLikedByCurrentUser" @onclick="TogglePostLikeAsync">
                 @(postLike.IsLikedByCurrentUser ? "Unlike" : "Like") (@postLike.Count)
             </button>
         </div>
@@ -37,7 +37,7 @@ else
     <h2>Comments</h2>
     <EditForm Model="input" OnValidSubmit="SubmitAsync" FormName="comment-editor">
         <DataAnnotationsValidator />
-        <ValidationSummary class="text-danger" />
+        <ValidationSummary class="text-danger" role="alert" />
         @if (replyTo is not null)
         {
             <p>Replying to @(replyTo.User.UserName ?? "User"): @replyTo.Content</p>
@@ -53,7 +53,7 @@ else
     <hr />
     @if (comments.Count == 0)
     {
-        <p>No comments yet. Start the conversation!</p>
+        <p role="status">No comments yet. Start the conversation!</p>
     }
     @foreach (var comment in comments.Where(c => c.ParentCommentId is null))
     {

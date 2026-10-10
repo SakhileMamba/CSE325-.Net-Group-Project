@@ -24,6 +24,11 @@ h1:focus {
     outline: none;
 }
 
+:where(a, button, input, select, textarea):focus-visible {
+    outline: 3px solid #005fcc;
+    outline-offset: 2px;
+}
+
 .valid.modified:not([type=checkbox]) {
     outline: 1px solid #26b050;
 }

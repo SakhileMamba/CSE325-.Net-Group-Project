@@ -9,6 +9,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Comment> Comments => Set<Comment>();
     public DbSet<PostLike> PostLikes => Set<PostLike>();
     public DbSet<CommentLike> CommentLikes => Set<CommentLike>();
+    public DbSet<UserNotification> Notifications => Set<UserNotification>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -30,6 +31,18 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                 .OnDelete(DeleteBehavior.Cascade);
             like.HasOne(l => l.User).WithMany().HasForeignKey(l => l.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<UserNotification>(notification =>
+        {
+            notification.Property(n => n.Kind).HasMaxLength(20);
+            notification.HasIndex(n => new { n.RecipientUserId, n.CreatedAtUtc });
+            notification.HasOne(n => n.RecipientUser).WithMany()
+                .HasForeignKey(n => n.RecipientUserId).OnDelete(DeleteBehavior.Cascade);
+            notification.HasOne(n => n.ActorUser).WithMany()
+                .HasForeignKey(n => n.ActorUserId).OnDelete(DeleteBehavior.Cascade);
+            notification.HasOne(n => n.Post).WithMany()
+                .HasForeignKey(n => n.PostId).OnDelete(DeleteBehavior.Cascade);
         });
 
         builder.Entity<Comment>(comment =>

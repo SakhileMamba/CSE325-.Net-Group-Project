@@ -8,8 +8,9 @@
 @inject UserManager<ApplicationUser> UserManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IWebHostEnvironment Environment
+@inject ILogger<ProfilePhotoUpload> Logger
 
-<div class="mb-4">
+<div class="mb-4 profile-photo-editor">
     <h5>Profile picture</h5>
 
     @if (!string.IsNullOrEmpty(ProfilePicture))
@@ -19,18 +20,26 @@
                  alt="Profile picture"
                  style="width: 120px; height: 120px; object-fit: cover; border-radius: 50%;" />
         </div>
+        <button type="button" class="btn btn-outline-danger btn-sm remove-photo-button"
+                disabled="@busy" @onclick="RemovePhotoAsync">
+            Remove profile picture
+        </button>
     }
 
-    <InputFile OnChange="UploadPhoto" accept=".jpg,.jpeg,.png,.gif" />
+    <div class="photo-file-input">
+        <label for="profile-photo-file" class="form-label mb-1">Choose a profile picture</label>
+        <InputFile id="profile-photo-file" class="form-control"
+                   OnChange="UploadPhoto" accept=".jpg,.jpeg,.png,.gif" disabled="@busy" />
+    </div>
 
     @if (!string.IsNullOrEmpty(Message))
     {
-        <div class="mt-2 text-success">@Message</div>
+        <div class="mt-2 text-success" role="status">@Message</div>
     }
 
     @if (!string.IsNullOrEmpty(ErrorMessage))
     {
-        <div class="mt-2 text-danger">@ErrorMessage</div>
+        <div class="mt-2 text-danger" role="alert">@ErrorMessage</div>
     }
 </div>
 
@@ -39,6 +48,7 @@
     private string? ProfilePicture;
     private string? Message;
     private string? ErrorMessage;
+    private bool busy;
 
     private const long MaxFileSize = 5 * 1024 * 1024;
 
@@ -56,71 +66,123 @@
 
     private async Task UploadPhoto(InputFileChangeEventArgs e)
     {
+        if (busy) return;
+        busy = true;
         Message = null;
         ErrorMessage = null;
-
-        if (user is null)
+        try
         {
-            ErrorMessage = "Unable to find your account.";
-            return;
+            if (user is null)
+            {
+                ErrorMessage = "Unable to find your account.";
+                return;
+            }
+
+            var file = e.File;
+
+            if (file is null)
+            {
+                ErrorMessage = "Please select an image.";
+                return;
+            }
+
+            if (file.Size > MaxFileSize)
+            {
+                ErrorMessage = "The image must be 5 MB or smaller.";
+                return;
+            }
+
+            var extension = Path.GetExtension(file.Name).ToLowerInvariant();
+
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
+
+            if (!allowedExtensions.Contains(extension))
+            {
+                ErrorMessage = "Please upload a JPG, JPEG, PNG, or GIF image.";
+                return;
+            }
+
+            var uploadsFolder = Path.Combine(
+                Environment.ContentRootPath,
+                "uploads",
+                "profiles");
+
+            Directory.CreateDirectory(uploadsFolder);
+
+            var fileName = $"{Guid.NewGuid()}{extension}";
+            var filePath = Path.Combine(uploadsFolder, fileName);
+
+            await using var stream = file.OpenReadStream(MaxFileSize);
+            await using var fileStream = new FileStream(filePath, FileMode.Create);
+
+            await stream.CopyToAsync(fileStream);
+
+            var oldProfilePicture = user.ProfilePicture;
+
+            user.ProfilePicture = $"/uploads/profiles/{fileName}";
+
+            var result = await UserManager.UpdateAsync(user);
+
+            if (!result.Succeeded)
+            {
+                File.Delete(filePath);
+                ErrorMessage = "The profile picture could not be saved.";
+                return;
+            }
+
+            DeleteOldProfilePicture(oldProfilePicture);
+
+            ProfilePicture = user.ProfilePicture;
+            Message = "Profile picture updated.";
         }
-
-        var file = e.File;
-
-        if (file is null)
+        catch (Exception ex)
         {
-            ErrorMessage = "Please select an image.";
-            return;
+            Logger.LogError(ex, "Saving the profile picture failed.");
+            ErrorMessage = "The profile picture could not be saved. Please try again.";
         }
-
-        if (file.Size > MaxFileSize)
+        finally
         {
-            ErrorMessage = "The image must be 5 MB or smaller.";
-            return;
+            busy = false;
         }
+    }
 
-        var extension = Path.GetExtension(file.Name).ToLowerInvariant();
-
-        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
-
-        if (!allowedExtensions.Contains(extension))
+    private async Task RemovePhotoAsync()
+    {
+        if (busy) return;
+        busy = true;
+        Message = null;
+        ErrorMessage = null;
+        try
         {
-            ErrorMessage = "Please upload a JPG, JPEG, PNG, or GIF image.";
-            return;
+            if (user is null)
+            {
+                ErrorMessage = "Unable to find your account.";
+                return;
+            }
+
+            var oldProfilePicture = user.ProfilePicture;
+            user.ProfilePicture = null;
+            var result = await UserManager.UpdateAsync(user);
+            if (!result.Succeeded)
+            {
+                user.ProfilePicture = oldProfilePicture;
+                ErrorMessage = "The profile picture could not be removed.";
+                return;
+            }
+
+            DeleteOldProfilePicture(oldProfilePicture);
+            ProfilePicture = null;
+            Message = "Profile picture removed.";
         }
-
-        var uploadsFolder = Path.Combine(
-            Environment.ContentRootPath,
-            "uploads",
-            "profiles");
-
-        Directory.CreateDirectory(uploadsFolder);
-
-        var fileName = $"{Guid.NewGuid()}{extension}";
-        var filePath = Path.Combine(uploadsFolder, fileName);
-
-        await using var stream = file.OpenReadStream(MaxFileSize);
-        await using var fileStream = new FileStream(filePath, FileMode.Create);
-
-        await stream.CopyToAsync(fileStream);
-
-        var oldProfilePicture = user.ProfilePicture;
-
-        user.ProfilePicture = $"/uploads/profiles/{fileName}";
-
-        var result = await UserManager.UpdateAsync(user);
-
-        if (!result.Succeeded)
+        catch (Exception ex)
         {
-            File.Delete(filePath);
-            ErrorMessage = "The profile picture could not be saved.";
-            return;
+            Logger.LogError(ex, "Removing the profile picture failed.");
+            ErrorMessage = "The profile picture could not be removed. Please try again.";
         }
-
-        DeleteOldProfilePicture(oldProfilePicture);
-
-        ProfilePicture = user.ProfilePicture;
-        Message = "Profile picture updated.";
+        finally
+        {
+            busy = false;
+        }
     }
 
     private void DeleteOldProfilePicture(string? oldProfilePicture)

@@ -1,0 +1,9 @@
+.notifications-feed { max-width: 600px; margin: 0 auto; border-left: 1px solid #eff3f4; border-right: 1px solid #eff3f4; min-height: 100%; }
+.notifications-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .75rem 1rem; border-bottom: 1px solid #eff3f4; }
+.notifications-header h1 { margin: 0; font-size: 1.25rem; font-weight: 700; }
+.notifications-header p { margin: .25rem 0 0; color: #536471; }
+.notification-item { display: flex; gap: .75rem; padding: 1rem; border-bottom: 1px solid #eff3f4; }
+.notification-item:hover { background: #f7f9f9; }
+.notification-item.unread { background: #eef7ff; }
+.notification-avatar { flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+.avatar-initial { display: flex; align-items: center; justify-content: center; background: #1b6ec2; color: white; font-weight: 700; }

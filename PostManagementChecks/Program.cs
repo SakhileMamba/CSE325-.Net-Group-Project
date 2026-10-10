@@ -131,6 +131,7 @@ try
     Check((await discussions.GetCommentsAsync(otherPost.Id)).Count == 0, "Comments isolated by post");
 
     var likes = new LikeService(factory, auth);
+    var notifications = new NotificationService(factory, auth);
     var postLike = await likes.TogglePostLikeAsync(discussionPost.Id);
     Check(postLike == new LikeSummary(1, true), "Like a post");
     var commentLike = await likes.ToggleCommentLikeAsync(root.Id);
@@ -141,10 +142,28 @@ try
     Check(commentLikes[root.Id] == new LikeSummary(1, true) &&
         commentLikes[reply.Id] == new LikeSummary(0, false), "Track comment like counts and current-user state");
     auth.SignIn("owner-a");
+    var ownerNotifications = await notifications.GetMineAsync();
+    Check(ownerNotifications.Count == 2 && ownerNotifications.All(n => !n.IsRead) &&
+        ownerNotifications.Any(n => n.Kind == NotificationKinds.PostLike && n.PostId == discussionPost.Id) &&
+        ownerNotifications.Any(n => n.Kind == NotificationKinds.CommentLike && n.CommentId == root.Id),
+        "Notify content owner when another user likes a post or comment");
+    await notifications.MarkAllReadAsync();
+    Check((await notifications.GetMineAsync()).All(n => n.IsRead), "Mark notifications as read");
+    auth.SignIn("owner-b");
+    Check((await notifications.GetMineAsync()).Count == 0, "Notifications are private to their recipient");
+    Check(await likes.TogglePostLikeAsync(discussionPost.Id) == new LikeSummary(0, false),
+        "Unlike removes the post-like notification");
+    auth.SignIn("owner-a");
+    Check((await notifications.GetMineAsync()).Count == 1, "Removed like no longer appears in notifications");
+    auth.SignIn("owner-b");
+    Check(await likes.TogglePostLikeAsync(discussionPost.Id) == new LikeSummary(1, true),
+        "Relike restores the post notification");
+    auth.SignIn("owner-a");
     Check(await likes.GetPostLikeAsync(discussionPost.Id) == new LikeSummary(1, false),
         "Post like state differs by user");
     Check(await likes.TogglePostLikeAsync(discussionPost.Id) == new LikeSummary(2, true),
         "A second user can like the same post");
+    Check((await notifications.GetMineAsync()).Count == 2, "Self-likes do not create notifications");
     Check(await likes.TogglePostLikeAsync(discussionPost.Id) == new LikeSummary(1, false), "Unlike a post");
     Check(await likes.ToggleCommentLikeAsync(root.Id) == new LikeSummary(2, true),
         "A second user can like the same comment");
@@ -183,6 +202,10 @@ try
         "Reject unauthenticated liked-post list");
     await Reject<UnauthorizedAccessException>(() => likes.GetMyLikedCommentsAsync(),
         "Reject unauthenticated liked-comment list");
+    await Reject<UnauthorizedAccessException>(() => notifications.GetMineAsync(),
+        "Reject unauthenticated notification list");
+    await Reject<UnauthorizedAccessException>(() => notifications.MarkAllReadAsync(),
+        "Reject unauthenticated notification update");
     auth.SignIn("owner-a");
     Check(await service.DeleteAsync(discussionPost.Id), "Delete post containing nested discussion");
     Check((await discussions.GetCommentsAsync(discussionPost.Id)).Count == 0,
@@ -190,7 +213,9 @@ try
     await using (var db = factory.CreateDbContext())
     {
         Check(!await db.PostLikes.AnyAsync(l => l.PostId == discussionPost.Id) &&
-            !await db.CommentLikes.AnyAsync(), "Deleting content removes its likes");
+            !await db.CommentLikes.AnyAsync() &&
+            !await db.Notifications.AnyAsync(n => n.PostId == discussionPost.Id),
+            "Deleting content removes its likes and notifications");
     }
 
     // Account deletion removes its comments but preserves other authors' replies.

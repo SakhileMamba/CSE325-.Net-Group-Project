@@ -92,10 +92,25 @@ public class LikeService(
     {
         var userId = await GetUserIdAsync();
         await using var db = await contextFactory.CreateDbContextAsync();
-        if (!await db.Posts.AnyAsync(p => p.Id == postId)) return null;
+        var ownerId = await db.Posts.Where(p => p.Id == postId).Select(p => p.UserId).SingleOrDefaultAsync();
+        if (ownerId is null) return null;
         var like = await db.PostLikes.FindAsync(postId, userId);
-        if (like is null) db.PostLikes.Add(new PostLike { PostId = postId, UserId = userId });
-        else db.PostLikes.Remove(like);
+        if (like is null)
+        {
+            db.PostLikes.Add(new PostLike { PostId = postId, UserId = userId });
+            if (ownerId != userId)
+                db.Notifications.Add(new UserNotification
+                {
+                    RecipientUserId = ownerId, ActorUserId = userId,
+                    Kind = NotificationKinds.PostLike, PostId = postId, CreatedAtUtc = DateTime.UtcNow
+                });
+        }
+        else
+        {
+            db.PostLikes.Remove(like);
+            await db.Notifications.Where(n => n.ActorUserId == userId && n.Kind == NotificationKinds.PostLike &&
+                n.PostId == postId).ExecuteDeleteAsync();
+        }
         await db.SaveChangesAsync();
         return new LikeSummary(await db.PostLikes.CountAsync(l => l.PostId == postId), like is null);
     }
@@ -104,10 +119,27 @@ public class LikeService(
     {
         var userId = await GetUserIdAsync();
         await using var db = await contextFactory.CreateDbContextAsync();
-        if (!await db.Comments.AnyAsync(c => c.Id == commentId)) return null;
+        var target = await db.Comments.Where(c => c.Id == commentId)
+            .Select(c => new { c.UserId, c.PostId }).SingleOrDefaultAsync();
+        if (target is null) return null;
         var like = await db.CommentLikes.FindAsync(commentId, userId);
-        if (like is null) db.CommentLikes.Add(new CommentLike { CommentId = commentId, UserId = userId });
-        else db.CommentLikes.Remove(like);
+        if (like is null)
+        {
+            db.CommentLikes.Add(new CommentLike { CommentId = commentId, UserId = userId });
+            if (target.UserId != userId)
+                db.Notifications.Add(new UserNotification
+                {
+                    RecipientUserId = target.UserId, ActorUserId = userId,
+                    Kind = NotificationKinds.CommentLike, PostId = target.PostId,
+                    CommentId = commentId, CreatedAtUtc = DateTime.UtcNow
+                });
+        }
+        else
+        {
+            db.CommentLikes.Remove(like);
+            await db.Notifications.Where(n => n.ActorUserId == userId && n.Kind == NotificationKinds.CommentLike &&
+                n.CommentId == commentId).ExecuteDeleteAsync();
+        }
         await db.SaveChangesAsync();
         return new LikeSummary(await db.CommentLikes.CountAsync(l => l.CommentId == commentId), like is null);
     }
