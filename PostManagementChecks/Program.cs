@@ -153,6 +153,17 @@ try
     Check(await likes.ToggleCommentLikeAsync(int.MaxValue) is null, "Reject like for missing comment");
     Check(await likes.GetPostLikeAsync(int.MaxValue) is null, "Missing post has no like summary");
     Check((await likes.GetCommentLikesAsync(otherPost.Id)).Count == 0, "Comment likes are isolated by post");
+    Check((await likes.GetMyLikedPostsAsync()).Count == 0 &&
+        (await likes.GetMyLikedCommentsAsync()).Count == 0, "Liked-content lists are scoped to the current user");
+    auth.SignIn("owner-b");
+    var likedPosts = await likes.GetMyLikedPostsAsync();
+    var likedComments = await likes.GetMyLikedCommentsAsync();
+    Check(likedPosts.Count == 1 && likedPosts[0].PostId == discussionPost.Id &&
+        likedPosts[0].LikeCount == 1 && likedPosts[0].Username == "a",
+        "View posts previously liked by the current user");
+    Check(likedComments.Count == 1 && likedComments[0].CommentId == root.Id &&
+        likedComments[0].PostId == discussionPost.Id && likedComments[0].LikeCount == 1,
+        "View comments previously liked by the current user with their post");
     auth.SignOut();
     await Reject<UnauthorizedAccessException>(() => discussions.AddAsync(discussionPost.Id, "Anonymous"),
         "Reject unauthenticated comment");
@@ -168,6 +179,10 @@ try
         "Reject unauthenticated comment like");
     await Reject<UnauthorizedAccessException>(() => likes.GetPostLikeAsync(discussionPost.Id),
         "Reject unauthenticated like read");
+    await Reject<UnauthorizedAccessException>(() => likes.GetMyLikedPostsAsync(),
+        "Reject unauthenticated liked-post list");
+    await Reject<UnauthorizedAccessException>(() => likes.GetMyLikedCommentsAsync(),
+        "Reject unauthenticated liked-comment list");
     auth.SignIn("owner-a");
     Check(await service.DeleteAsync(discussionPost.Id), "Delete post containing nested discussion");
     Check((await discussions.GetCommentsAsync(discussionPost.Id)).Count == 0,

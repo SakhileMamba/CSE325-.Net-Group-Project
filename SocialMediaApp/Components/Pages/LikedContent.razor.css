@@ -1,0 +1,21 @@
+.feed { max-width: 600px; margin: 0 auto; border-left: 1px solid #eff3f4; border-right: 1px solid #eff3f4; }
+.feed-header { display: flex; align-items: center; gap: .5rem; margin: 0; padding: .75rem 1rem; font-size: 1.25rem; font-weight: 700; border-bottom: 1px solid #eff3f4; }
+.heart-icon { width: 1.15rem; height: 1.15rem; fill: #e0245e; }
+.page-description { margin: 0; padding: .75rem 1rem; color: #536471; border-bottom: 1px solid #eff3f4; }
+.section-header { margin: 0; padding: .75rem 1rem; font-size: 1rem; font-weight: 700; background: #f7f9f9; border-bottom: 1px solid #eff3f4; }
+.post { display: flex; gap: .75rem; padding: .75rem 1rem; border-bottom: 1px solid #eff3f4; }
+.post:hover { background-color: #f7f9f9; }
+.avatar { flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+.avatar-initial { display: flex; align-items: center; justify-content: center; background-color: #1b6ec2; color: #fff; font-weight: 700; }
+.post-body { flex: 1; min-width: 0; }
+.post-author { color: #0f1419; font-weight: 700; text-decoration: none; overflow-wrap: anywhere; }
+.post-author:hover { text-decoration: underline; }
+.post-content { margin: .125rem 0 .5rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.context-line { margin: 0 0 .5rem; color: #536471; font-size: .875rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.post-actions { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.action-link { color: #536471; font-size: .875rem; text-decoration: none; }
+.action-link:hover { color: #1b6ec2; text-decoration: underline; }
+.like-button { display: inline-flex; align-items: center; gap: .35rem; border: 0; background: transparent; color: #e0245e; font-size: .875rem; padding: .25rem .5rem; border-radius: 999px; }
+.like-button:hover { background: #fce8ef; }
+.like-button:disabled { opacity: .65; }
+.like-button svg { width: 1rem; height: 1rem; fill: currentColor; }
