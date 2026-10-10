@@ -1,0 +1,70 @@
+@using System.Globalization
+@using SocialMediaApp.Data
+@inject NavigationManager Navigation
+
+<article class="post">
+    @if (!string.IsNullOrEmpty(Post.User.ProfilePicture))
+    {
+        <img class="avatar" src="@Post.User.ProfilePicture" alt="" />
+    }
+    else
+    {
+        <div class="avatar avatar-initial" aria-hidden="true">@DisplayName[..1].ToUpperInvariant()</div>
+    }
+    <div class="post-body">
+        <div>
+            <a class="post-author" href="@($"profile/{Uri.EscapeDataString(Post.User.UserName ?? "")}")">@DisplayName</a>
+            <span class="text-muted">·</span>
+            <a class="post-time" href="@($"posts/{Post.Id}")"
+               title="@($"{Post.CreatedAtUtc:yyyy-MM-dd HH:mm} UTC")">@TimeAgo(Post.CreatedAtUtc)</a>
+        </div>
+        <p class="post-content">@Post.Content</p>
+        <a class="post-action" href="@($"posts/{Post.Id}")">Reply</a>
+        @if (Comments.Count > 0)
+        {
+            <button type="button" class="post-action post-toggle" @onclick="() => showReplies = !showReplies">
+                @(showReplies ? "Hide replies" : $"Show replies ({Comments.Count})")
+            </button>
+        }
+        @if (showReplies)
+        {
+            <div class="mt-2">
+                @foreach (var comment in Comments.Where(c => c.ParentCommentId is null))
+                {
+                    <ThreadComment @key="comment.Id" Comment="comment" Comments="Comments" StartExpanded="false"
+                                   OnReply="OpenDiscussion" />
+                }
+            </div>
+        }
+    </div>
+</article>
+
+@code {
+    [Parameter, EditorRequired] public Post Post { get; set; } = null!;
+    // Every comment and reply on this post.
+    [Parameter] public IReadOnlyList<Comment> Comments { get; set; } = Array.Empty<Comment>();
+
+    private bool showReplies;
+
+    private void OpenDiscussion(Comment comment) => Navigation.NavigateTo($"posts/{Post.Id}");
+
+    private string DisplayName
+    {
+        get
+        {
+            var fullName = $"{Post.User.FirstName} {Post.User.LastName}".Trim();
+            return fullName.Length > 0 ? fullName : Post.User.UserName ?? "User";
+        }
+    }
+
+    // Short times like Twitter: "now", "5m", "3h", then the date.
+    private static string TimeAgo(DateTime createdAtUtc)
+    {
+        var age = DateTime.UtcNow - createdAtUtc;
+        if (age.TotalMinutes < 1) return "now";
+        if (age.TotalHours < 1) return $"{(int)age.TotalMinutes}m";
+        if (age.TotalDays < 1) return $"{(int)age.TotalHours}h";
+        var format = createdAtUtc.Year == DateTime.UtcNow.Year ? "MMM d" : "MMM d, yyyy";
+        return createdAtUtc.ToString(format, CultureInfo.InvariantCulture);
+    }
+}

@@ -36,6 +36,17 @@ public class CommentService(
             .ToListAsync();
     }
 
+    // Comments for a page of feed posts, loaded in one query so the feed can show
+    // reply counts and open threads without going back to the database.
+    public async Task<List<Comment>> GetCommentsForPostsAsync(List<int> postIds)
+    {
+        await GetUserIdAsync();
+        await using var db = await contextFactory.CreateDbContextAsync();
+        return await db.Comments.AsNoTracking().Include(c => c.User)
+            .Where(c => postIds.Contains(c.PostId)).OrderBy(c => c.CreatedAtUtc).ThenBy(c => c.Id)
+            .ToListAsync();
+    }
+
     public async Task AddAsync(int postId, string content, int? parentCommentId = null)
     {
         var userId = await GetUserIdAsync();

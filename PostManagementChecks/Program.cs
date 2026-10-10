@@ -66,9 +66,15 @@ try
     Check(!await service.UpdateAsync(post.Id, "Unauthorized edit"), "Reject another user's update");
     Check(!await service.DeleteAsync(post.Id), "Reject another user's delete");
     await service.CreateAsync("Owner B post");
+    var feed = await service.GetFeedAsync();
+    Check(feed.Count == 3 && feed[0].Content == "Owner B post" && feed[0].User.UserName == "b" &&
+        feed.Any(p => p.UserId == "owner-a"), "Feed shows every user's posts, newest first, with authors");
+    Check((await service.GetFeedAsync(feed[0].Id, pageSize: 1)).Single().Id == feed[1].Id,
+        "Feed loads the next page after the oldest post shown");
 
     auth.SignOut();
     await Reject<UnauthorizedAccessException>(() => service.GetMyPostsAsync(), "Reject unauthenticated read");
+    await Reject<UnauthorizedAccessException>(() => service.GetFeedAsync(), "Reject unauthenticated feed read");
     await Reject<UnauthorizedAccessException>(() => service.CreateAsync("Anonymous"), "Reject unauthenticated create");
     await Reject<UnauthorizedAccessException>(() => service.UpdateAsync(post.Id, "Anonymous"), "Reject unauthenticated update");
     await Reject<UnauthorizedAccessException>(() => service.DeleteAsync(post.Id), "Reject unauthenticated delete");
@@ -123,6 +129,9 @@ try
     await Reject<ValidationException>(() => discussions.AddAsync(discussionPost.Id, " \t\n"), "Reject blank comment");
     await Reject<ValidationException>(() => discussions.AddAsync(discussionPost.Id, "", root.Id), "Reject blank reply");
     Check((await discussions.GetCommentsAsync(otherPost.Id)).Count == 0, "Comments isolated by post");
+    var feedComments = await discussions.GetCommentsForPostsAsync([discussionPost.Id, otherPost.Id]);
+    Check(feedComments.Count == 4 && feedComments.All(c => c.PostId == discussionPost.Id && c.User is not null),
+        "Load comments for several feed posts at once");
     auth.SignOut();
     await Reject<UnauthorizedAccessException>(() => discussions.AddAsync(discussionPost.Id, "Anonymous"),
         "Reject unauthenticated comment");
@@ -132,6 +141,8 @@ try
         "Reject unauthenticated discussion read");
     await Reject<UnauthorizedAccessException>(() => discussions.GetPostAsync(discussionPost.Id),
         "Reject unauthenticated post discussion read");
+    await Reject<UnauthorizedAccessException>(() => discussions.GetCommentsForPostsAsync([discussionPost.Id]),
+        "Reject unauthenticated feed comments read");
     auth.SignIn("owner-a");
     Check(await service.DeleteAsync(discussionPost.Id), "Delete post containing nested discussion");
     Check((await discussions.GetCommentsAsync(discussionPost.Id)).Count == 0,
