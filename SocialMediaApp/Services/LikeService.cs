@@ -6,6 +6,12 @@ using SocialMediaApp.Data;
 namespace SocialMediaApp.Services;
 
 public sealed record LikeSummary(int Count, bool IsLikedByCurrentUser);
+public sealed record LikedPostItem(
+    int PostId, string Content, string Username, string DisplayName, string? ProfilePicture,
+    DateTime CreatedAtUtc, int LikeCount);
+public sealed record LikedCommentItem(
+    int CommentId, string Content, string Username, string DisplayName, string? ProfilePicture, DateTime CreatedAtUtc,
+    int PostId, string PostContent, int LikeCount);
 
 public class LikeService(
     IDbContextFactory<ApplicationDbContext> contextFactory,
@@ -18,6 +24,42 @@ public class LikeService(
         if (user.Identity?.IsAuthenticated != true || string.IsNullOrEmpty(id))
             throw new UnauthorizedAccessException("Please log in to like content.");
         return id;
+    }
+
+    public async Task<List<LikedPostItem>> GetMyLikedPostsAsync()
+    {
+        var userId = await GetUserIdAsync();
+        await using var db = await contextFactory.CreateDbContextAsync();
+        return await db.PostLikes.AsNoTracking().Where(l => l.UserId == userId)
+            .OrderByDescending(l => l.Post.CreatedAtUtc).ThenByDescending(l => l.PostId)
+            .Select(l => new LikedPostItem(
+                l.PostId,
+                l.Post.Content,
+                l.Post.User.UserName ?? "User",
+                ((l.Post.User.FirstName ?? "") + " " + (l.Post.User.LastName ?? "")).Trim(),
+                l.Post.User.ProfilePicture,
+                l.Post.CreatedAtUtc,
+                db.PostLikes.Count(other => other.PostId == l.PostId)))
+            .ToListAsync();
+    }
+
+    public async Task<List<LikedCommentItem>> GetMyLikedCommentsAsync()
+    {
+        var userId = await GetUserIdAsync();
+        await using var db = await contextFactory.CreateDbContextAsync();
+        return await db.CommentLikes.AsNoTracking().Where(l => l.UserId == userId)
+            .OrderByDescending(l => l.Comment.CreatedAtUtc).ThenByDescending(l => l.CommentId)
+            .Select(l => new LikedCommentItem(
+                l.CommentId,
+                l.Comment.Content,
+                l.Comment.User.UserName ?? "User",
+                ((l.Comment.User.FirstName ?? "") + " " + (l.Comment.User.LastName ?? "")).Trim(),
+                l.Comment.User.ProfilePicture,
+                l.Comment.CreatedAtUtc,
+                l.Comment.PostId,
+                l.Comment.Post.Content,
+                db.CommentLikes.Count(other => other.CommentId == l.CommentId)))
+            .ToListAsync();
     }
 
     public async Task<LikeSummary?> GetPostLikeAsync(int postId)

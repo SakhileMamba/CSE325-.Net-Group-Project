@@ -1,0 +1,152 @@
+@page "/liked"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@using SocialMediaApp.Services
+@inject LikeService LikeService
+@inject ILogger<LikedContent> Logger
+
+<PageTitle>Liked Content</PageTitle>
+<div class="feed">
+<h1 class="feed-header">
+    <svg class="heart-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 14s6-3.33 6-8.5A3.5 3.5 0 0 0 8 3.05 3.5 3.5 0 0 0 2 5.5C2 10.67 8 14 8 14z" /></svg>
+    Liked Content
+</h1>
+<p class="page-description">Posts and comments you have liked.</p>
+
+@if (message is not null)
+{
+    <div class="alert alert-info m-3" role="status">@message</div>
+}
+@if (loading)
+{
+    <p class="text-muted p-3">Loading liked content...</p>
+}
+else
+{
+    <section>
+        <h2 class="section-header">Liked Posts</h2>
+        @if (posts.Count == 0)
+        {
+            <p class="text-muted p-3">You have not liked any posts yet.</p>
+        }
+        @foreach (var post in posts)
+        {
+            <article class="post" @key="post.PostId">
+                @if (!string.IsNullOrEmpty(post.ProfilePicture))
+                {
+                    <img class="avatar" src="@post.ProfilePicture" alt="" />
+                }
+                else
+                {
+                    <div class="avatar avatar-initial" aria-hidden="true">@Initial(post.DisplayName, post.Username)</div>
+                }
+                <div class="post-body">
+                    <div>
+                        <a class="post-author" href="@($"profile/{Uri.EscapeDataString(post.Username)}")">@Author(post.DisplayName, post.Username)</a>
+                        <span class="text-muted">· @post.CreatedAtUtc.ToString("MMM d")</span>
+                    </div>
+                    <p class="post-content">@post.Content</p>
+                    <div class="post-actions">
+                        <a class="action-link" href="@($"posts/{post.PostId}")">Open discussion</a>
+                        <button type="button" class="like-button" disabled="@busy" @onclick="() => UnlikePostAsync(post.PostId)">
+                            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 14s6-3.33 6-8.5A3.5 3.5 0 0 0 8 3.05 3.5 3.5 0 0 0 2 5.5C2 10.67 8 14 8 14z" /></svg>
+                            Unlike (@post.LikeCount)
+                        </button>
+                    </div>
+                </div>
+            </article>
+        }
+    </section>
+
+    <section>
+        <h2 class="section-header">Liked Comments</h2>
+        @if (comments.Count == 0)
+        {
+            <p class="text-muted p-3">You have not liked any comments yet.</p>
+        }
+        @foreach (var comment in comments)
+        {
+            <article class="post" @key="comment.CommentId">
+                @if (!string.IsNullOrEmpty(comment.ProfilePicture))
+                {
+                    <img class="avatar" src="@comment.ProfilePicture" alt="" />
+                }
+                else
+                {
+                    <div class="avatar avatar-initial" aria-hidden="true">@Initial(comment.DisplayName, comment.Username)</div>
+                }
+                <div class="post-body">
+                    <div>
+                        <a class="post-author" href="@($"profile/{Uri.EscapeDataString(comment.Username)}")">@Author(comment.DisplayName, comment.Username)</a>
+                        <span class="text-muted">· @comment.CreatedAtUtc.ToString("MMM d")</span>
+                    </div>
+                    <p class="post-content">@comment.Content</p>
+                    <p class="context-line">Reply to: @comment.PostContent</p>
+                    <div class="post-actions">
+                        <a class="action-link" href="@($"posts/{comment.PostId}")">Open discussion</a>
+                        <button type="button" class="like-button" disabled="@busy" @onclick="() => UnlikeCommentAsync(comment.CommentId)">
+                            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 14s6-3.33 6-8.5A3.5 3.5 0 0 0 8 3.05 3.5 3.5 0 0 0 2 5.5C2 10.67 8 14 8 14z" /></svg>
+                            Unlike (@comment.LikeCount)
+                        </button>
+                    </div>
+                </div>
+            </article>
+        }
+    </section>
+}
+</div>
+
+@code {
+    private List<LikedPostItem> posts = new();
+    private List<LikedCommentItem> comments = new();
+    private bool loading = true;
+    private bool busy;
+    private string? message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+        loading = false;
+    }
+
+    private async Task LoadAsync()
+    {
+        posts = await LikeService.GetMyLikedPostsAsync();
+        comments = await LikeService.GetMyLikedCommentsAsync();
+    }
+
+    private Task UnlikePostAsync(int postId) => RunAsync(async () =>
+    {
+        await LikeService.TogglePostLikeAsync(postId);
+        await LoadAsync();
+        message = "Post removed from your liked content.";
+    });
+
+    private Task UnlikeCommentAsync(int commentId) => RunAsync(async () =>
+    {
+        await LikeService.ToggleCommentLikeAsync(commentId);
+        await LoadAsync();
+        message = "Comment removed from your liked content.";
+    });
+
+    private async Task RunAsync(Func<Task> action)
+    {
+        if (busy) return;
+        busy = true;
+        message = null;
+        try { await action(); }
+        catch (UnauthorizedAccessException ex) { message = ex.Message; }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Liked-content operation failed.");
+            message = "Unable to update your liked content. Please try again.";
+        }
+        finally { busy = false; }
+    }
+
+    private static string Author(string displayName, string username)
+        => string.IsNullOrWhiteSpace(displayName) ? username : displayName;
+
+    private static string Initial(string displayName, string username)
+        => Author(displayName, username)[..1].ToUpperInvariant();
+}

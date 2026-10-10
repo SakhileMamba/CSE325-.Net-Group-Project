@@ -31,7 +31,7 @@ public class PostService(
     {
         var userId = await GetUserIdAsync();
         await using var db = await contextFactory.CreateDbContextAsync();
-        return await db.Posts.AsNoTracking().Where(p => p.UserId == userId)
+        return await db.Posts.AsNoTracking().Include(p => p.User).Where(p => p.UserId == userId)
             .OrderByDescending(p => p.CreatedAtUtc).ThenByDescending(p => p.Id).ToListAsync();
     }
 
