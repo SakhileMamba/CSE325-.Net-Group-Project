@@ -18,6 +18,19 @@
         </div>
     </EditForm>
 
+    <div class="p-3 border-bottom">
+        <label for="feed-filter" class="form-label">Show posts</label>
+        <select id="feed-filter" class="form-select" value="@filterByInterests.ToString()"
+                @onchange="ChangeFilterAsync" disabled="@busy" aria-describedby="feed-interests">
+            <option value="False">All posts</option>
+            <option value="True">My interests</option>
+        </select>
+        <p id="feed-interests" class="form-text mb-0">
+            Interests: @(interests.Length == 0 ? "None selected" : string.Join(", ", interests)).
+            <a href="Account/Manage">Update interests</a>
+        </p>
+    </div>
+
     @if (message is not null)
     {
         <div class="alert alert-info m-3" role="status">@message</div>
@@ -29,7 +42,11 @@
     }
     else if (posts.Count == 0)
     {
-        <p class="text-muted p-3">No posts yet. Be the first to share something!</p>
+        <p class="text-muted p-3" role="status">
+            @(filterByInterests
+                ? (interests.Length == 0 ? "Select interests in your profile to filter posts." : "No posts match your interests. Try All posts or update your interests.")
+                : "No posts yet. Be the first to share something!")
+        </p>
     }
     else
     {
@@ -49,14 +66,26 @@
     private List<Post>? posts;
     private PostInput input = new();
     private bool hasMore;
+    private bool filterByInterests;
+    private string[] interests = [];
     private bool busy;
     private string? message;
 
-    protected override Task OnInitializedAsync() => RunAsync(LoadNewestAsync);
+    protected override Task OnInitializedAsync() => RunAsync(async () =>
+    {
+        interests = await PostService.GetInterestsAsync();
+        await LoadNewestAsync();
+    });
+
+    private Task ChangeFilterAsync(ChangeEventArgs args) => RunAsync(async () =>
+    {
+        filterByInterests = string.Equals(args.Value?.ToString(), "True", StringComparison.OrdinalIgnoreCase);
+        await LoadNewestAsync();
+    });
 
     private async Task LoadNewestAsync()
     {
-        posts = await PostService.GetFeedAsync(pageSize: PageSize);
+        posts = await PostService.GetFeedAsync(pageSize: PageSize, filterByInterests: filterByInterests);
         hasMore = posts.Count == PageSize;
     }
 
@@ -69,7 +98,7 @@
 
     private Task LoadMoreAsync() => RunAsync(async () =>
     {
-        var older = await PostService.GetFeedAsync(posts![^1].Id, PageSize);
+        var older = await PostService.GetFeedAsync(posts![^1].Id, PageSize, filterByInterests: filterByInterests);
         posts.AddRange(older);
         hasMore = older.Count == PageSize;
     });

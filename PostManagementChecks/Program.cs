@@ -156,6 +156,7 @@ try
     var preserved = (await discussions.GetCommentsAsync(otherPost.Id)).Single();
     Check(preserved.UserId == "owner-b" && preserved.ParentCommentId is null,
         "Account deletion preserves other authors' replies as root comments");
+    await InterestFeedChecks.RunAsync(factory);
     Console.WriteLine($"All {passed} checks passed.");
 }
 finally
