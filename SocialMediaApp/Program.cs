@@ -78,8 +78,7 @@ else
 }
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
-// Profile pictures are uploaded while the app runs, so they are saved outside wwwroot
-// (new files in wwwroot crash dotnet watch) and served from the /uploads URL.
+// Uploaded profile pictures are kept outside wwwroot and served from /uploads.
 var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "uploads");
 Directory.CreateDirectory(uploadsPath);
 app.UseStaticFiles(new StaticFileOptions

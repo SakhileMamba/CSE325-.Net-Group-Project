@@ -34,7 +34,7 @@
         }
     }
 
-    // Short times like Twitter: "now", "5m", "3h", then the date.
+    // "now", "5m", "3h", then the date
     private static string TimeAgo(DateTime createdAtUtc)
     {
         var age = DateTime.UtcNow - createdAtUtc;

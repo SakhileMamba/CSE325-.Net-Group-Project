@@ -19,7 +19,7 @@
 
 @code {
     [Parameter, EditorRequired] public int PostId { get; set; }
-    // The comment being replied to, or null for a reply to the post itself.
+    // null when replying to the post itself
     [Parameter] public Comment? ParentComment { get; set; }
     [Parameter] public EventCallback OnPosted { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }

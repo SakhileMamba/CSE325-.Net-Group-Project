@@ -26,7 +26,6 @@
     font-weight: 700;
 }
 
-/* min-width lets long words wrap instead of stretching the card. */
 .post-body {
     flex: 1;
     min-width: 0;

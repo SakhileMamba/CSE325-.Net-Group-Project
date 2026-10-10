@@ -35,8 +35,7 @@ public class PostService(
             .OrderByDescending(p => p.CreatedAtUtc).ThenByDescending(p => p.Id).ToListAsync();
     }
 
-    // Every user's posts, newest first. Ids grow as posts are created, so the next
-    // page is the posts with an Id lower than the oldest one already shown.
+    // All users' posts, newest first. Pass the oldest Id shown to get the next page.
     public async Task<List<Post>> GetFeedAsync(int? beforeId = null, int pageSize = 20)
     {
         await GetUserIdAsync();

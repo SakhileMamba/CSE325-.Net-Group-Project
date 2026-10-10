@@ -3,7 +3,6 @@
 @inject CommentService CommentService
 @inject ILogger<PostReplies> Logger
 
-@* A post's Reply button, its foldable comment thread, and inline reply boxes. *@
 <div class="d-flex gap-3">
     <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" @onclick="() => StartReply(null)">Reply</button>
     @if (comments.Count > 0)
@@ -42,7 +41,7 @@
     private List<Comment> comments = new();
     private bool showReplies;
     private bool replying;
-    // The comment being replied to, or null while replying to the post itself.
+    // null when replying to the post itself
     private Comment? replyTo;
     private string? message;
 

@@ -13,7 +13,6 @@ main {
 }
 
 @media (min-width: 641px) {
-    /* On wide screens the navigation is a bar across the top of the page. */
     .sidebar {
         display: flex;
         align-items: center;
