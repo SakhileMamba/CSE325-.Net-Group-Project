@@ -17,7 +17,7 @@ Email ownership is not verified in this feature. The existing template email sen
 ## Integration for teammates
 
 - Inject `SocialMediaApp.Services.ICurrentUser` in a Blazor component and await `GetAsync()`. It returns `CurrentUserInfo` (`Id`, `Email`) or `null` for a guest. The ID is the existing Identity primary key; use it for profile/post ownership relationships rather than email.
-- Add `@attribute [Authorize]` to protected pages. `/account` is a minimal example, not a social profile implementation. `/auth` remains compatible with the original starter project.
+- Add `@attribute [Authorize]` to protected pages. `/my-posts` is an example. The home page (`/`) uses `<AuthorizeView>` instead: guests see a welcome message and signed-in users see the feed. Login and registration send users to the home feed. `/auth` remains compatible with the original starter project.
 - Use `AuthorizeView` for conditional UI. Enforce authorization and ownership again in server services/endpoints; hiding a button does not secure data. For endpoints, use `.RequireAuthorization()` and read the authenticated principal's `ClaimTypes.NameIdentifier`. Do not trust user IDs submitted by clients.
 - Existing routes: `/Account/Register`, `/Account/Login`, `/Account/Manage`; logout is an antiforgery-protected POST to `/Account/Logout`. Login and registration accept a local `ReturnUrl` query parameter.
 - Authentication and its database are already registered in `Program.cs`. No profile, posts, feed, or other team feature is implemented here.

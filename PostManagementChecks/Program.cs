@@ -66,9 +66,15 @@ try
     Check(!await service.UpdateAsync(post.Id, "Unauthorized edit"), "Reject another user's update");
     Check(!await service.DeleteAsync(post.Id), "Reject another user's delete");
     await service.CreateAsync("Owner B post");
+    var feed = await service.GetFeedAsync();
+    Check(feed.Count == 3 && feed[0].Content == "Owner B post" && feed[0].User.UserName == "b" &&
+        feed.Any(p => p.UserId == "owner-a"), "Feed shows every user's posts, newest first, with authors");
+    Check((await service.GetFeedAsync(feed[0].Id, pageSize: 1)).Single().Id == feed[1].Id,
+        "Feed loads the next page after the oldest post shown");
 
     auth.SignOut();
     await Reject<UnauthorizedAccessException>(() => service.GetMyPostsAsync(), "Reject unauthenticated read");
+    await Reject<UnauthorizedAccessException>(() => service.GetFeedAsync(), "Reject unauthenticated feed read");
     await Reject<UnauthorizedAccessException>(() => service.CreateAsync("Anonymous"), "Reject unauthenticated create");
     await Reject<UnauthorizedAccessException>(() => service.UpdateAsync(post.Id, "Anonymous"), "Reject unauthenticated update");
     await Reject<UnauthorizedAccessException>(() => service.DeleteAsync(post.Id), "Reject unauthenticated delete");

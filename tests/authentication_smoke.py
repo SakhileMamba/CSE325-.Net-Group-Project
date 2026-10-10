@@ -57,21 +57,23 @@ def app_cookie(browser):
 
 
 browser = Browser()
-status, headers, _ = browser.request('/account')
+status, headers, _ = browser.request('/my-posts')
 assert status == 302 and '/Account/Login' in headers['Location'], 'Guest access must be protected'
+status, _, body = browser.request('/')
+assert status == 200 and 'Get started' in body, 'Guests see the welcome page on the home page'
 assert register(browser, EMAIL, 'short')[0] == 200 and app_cookie(browser) is None
 assert register(browser, EMAIL, confirmation='Different-Password42!')[0] == 200
 status, headers, _ = register(browser, EMAIL)
-assert status == 302 and urlsplit(headers['Location']).path == '/account'
+assert status == 302 and urlsplit(headers['Location']).path == '/'
 assert app_cookie(browser) is not None and app_cookie(browser).discard
 assert any(key.lower() == 'httponly' for key in app_cookie(browser)._rest)
-assert EMAIL in browser.request('/account')[2]
+assert EMAIL in browser.request('/')[2]
 status, _, _ = browser.request('/Account/Logout', {'ReturnUrl': ''})
 assert status == 400, 'Logout must reject missing antiforgery token'
-_, _, body = browser.request('/account')
+_, _, body = browser.request('/')
 token = re.search(r'name="__RequestVerificationToken"[^>]*value="([^"]+)"', body)[1]
 assert browser.request('/Account/Logout', {'ReturnUrl': '', '__RequestVerificationToken': html.unescape(token)})[0] == 302
-assert browser.request('/account')[0] == 302
+assert browser.request('/my-posts')[0] == 302
 assert register(Browser(), EMAIL.upper())[0] == 200, 'Duplicate email should be rejected'
 assert login(browser, 'Incorrect-Password42!')[0] == 200 and app_cookie(browser) is None
 assert login(browser, remember=True)[0] == 302
@@ -80,14 +82,14 @@ for return_url in ('https://example.com/', '//example.com/', '/\\example.com/'):
     other = Browser()
     path = '/Account/Login?' + urlencode({'ReturnUrl': return_url})
     status, headers, _ = login(other, path=path)
-    assert status == 302 and urlsplit(headers['Location']).path == '/account', headers['Location']
+    assert status == 302 and urlsplit(headers['Location']).path == '/', headers['Location']
 local = Browser()
 status, headers, _ = login(local, path='/Account/Login?' + urlencode({'ReturnUrl': '/auth'}))
 assert status == 302 and urlsplit(headers['Location']).path == '/auth'
 external_registration = Browser()
 status, headers, _ = register(external_registration, f'auth-{uuid.uuid4().hex}@example.com',
                              path='/Account/Register?' + urlencode({'ReturnUrl': 'https://example.com/'}))
-assert status == 302 and urlsplit(headers['Location']).path == '/account'
+assert status == 302 and urlsplit(headers['Location']).path == '/'
 assert Browser().request('/Account/Register', {'Input.Email': EMAIL, 'Input.Password': PASSWORD})[0] == 400
 lockout = Browser()
 for attempt in range(5):

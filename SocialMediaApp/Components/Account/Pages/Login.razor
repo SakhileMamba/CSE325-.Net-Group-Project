@@ -107,7 +107,7 @@
         if (result.Succeeded)
         {
             Logger.LogInformation("User logged in.");
-            RedirectManager.RedirectTo(ReturnUrl ?? "account");
+            RedirectManager.RedirectTo(ReturnUrl ?? "");
         }
         else if (result.RequiresTwoFactor)
         {

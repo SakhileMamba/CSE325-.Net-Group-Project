@@ -1,0 +1,24 @@
+.welcome {
+    max-width: 600px;
+    margin: 3rem auto;
+    text-align: center;
+}
+
+.welcome h1 {
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.welcome-points {
+    display: inline-block;
+    margin: 0.5rem 0 1.5rem;
+    text-align: left;
+}
+
+.welcome-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}

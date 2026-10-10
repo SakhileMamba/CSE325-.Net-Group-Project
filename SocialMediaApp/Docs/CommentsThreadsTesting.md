@@ -1,9 +1,9 @@
 # Comments & Threads
 
 Signed-in users open `/posts/{postId}` to read a post's discussion, add a comment,
-or reply to any comment (including a reply). My Posts has a **Comments & replies**
-link on each post. The feed teammate can link to the same route without changing
-the home page as part of this feature.
+or reply to any comment (including a reply). The home feed and My Posts also show
+each post's thread inline, with **Reply** buttons that open a reply box in place;
+a post's time on the home feed links to its discussion page.
 
 `Comment` stores its post, author, content, UTC creation time, and optional parent
 comment ID. A null parent means a root comment. The service reads the author ID
@@ -39,7 +39,7 @@ returned HTTP 302 to login. The browser checks below remain manual.
 ## Browser checks
 
 1. From `SocialMediaApp`, run `dotnet ef database update`, then `dotnet run`.
-2. Log in as A, create a post, and click **Comments & replies**.
+2. Log in as A, create a post, and open its discussion page (click the post's time on the home feed).
 3. Add two comments. Refresh and verify both remain with author and UTC time.
 4. Click **Reply** on a comment, submit a reply, then reply to that reply.
    Verify the nested order and indentation.

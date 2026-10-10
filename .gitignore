@@ -5,3 +5,5 @@
 **/Data/*.db-wal
 .vs/
 .DS_Store
+**/Data/*.db-journal
+SocialMediaApp/uploads/

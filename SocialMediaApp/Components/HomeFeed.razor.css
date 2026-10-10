@@ -1,0 +1,34 @@
+.feed {
+    max-width: 600px;
+    margin: 0 auto;
+    border-left: 1px solid #eff3f4;
+    border-right: 1px solid #eff3f4;
+}
+
+.feed-header {
+    margin: 0;
+    padding: 0.75rem 1rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    border-bottom: 1px solid #eff3f4;
+}
+
+::deep .composer {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #eff3f4;
+}
+
+::deep .composer textarea {
+    border: none;
+    resize: none;
+    font-size: 1.25rem;
+    padding: 0.25rem 0;
+}
+
+.composer-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 0.5rem;
+    border-top: 1px solid #eff3f4;
+}

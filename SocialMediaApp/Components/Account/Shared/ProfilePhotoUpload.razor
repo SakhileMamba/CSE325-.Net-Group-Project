@@ -90,7 +90,7 @@
         }
 
         var uploadsFolder = Path.Combine(
-            Environment.WebRootPath,
+            Environment.ContentRootPath,
             "uploads",
             "profiles");
 
@@ -145,7 +145,7 @@
         }
 
         var oldFilePath = Path.Combine(
-            Environment.WebRootPath,
+            Environment.ContentRootPath,
             "uploads",
             "profiles",
             oldFileName);
