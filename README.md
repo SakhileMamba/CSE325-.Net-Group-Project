@@ -73,6 +73,8 @@ browser, responsive layout, or assistive technology has been manually tested.
   support and remaining manual checks.
 - [`docs/authentication.md`](docs/authentication.md) covers account setup, security,
   and teammate integration points.
+- [`docs/azure-deployment.md`](docs/azure-deployment.md) explains the prepared
+  single-instance Azure App Service deployment.
 
 ## Team workflow
 

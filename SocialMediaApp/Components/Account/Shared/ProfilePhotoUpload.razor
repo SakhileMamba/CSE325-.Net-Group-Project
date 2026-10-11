@@ -8,6 +8,7 @@
 @inject UserManager<ApplicationUser> UserManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IWebHostEnvironment Environment
+@inject IConfiguration Configuration
 @inject ILogger<ProfilePhotoUpload> Logger
 
 <div class="mb-4 profile-photo-editor">
@@ -102,10 +103,7 @@
                 return;
             }
 
-            var uploadsFolder = Path.Combine(
-                Environment.ContentRootPath,
-                "uploads",
-                "profiles");
+            var uploadsFolder = ProfilesFolder;
 
             Directory.CreateDirectory(uploadsFolder);
 
@@ -206,15 +204,16 @@
             return;
         }
 
-        var oldFilePath = Path.Combine(
-            Environment.ContentRootPath,
-            "uploads",
-            "profiles",
-            oldFileName);
+        var oldFilePath = Path.Combine(ProfilesFolder, oldFileName);
 
         if (File.Exists(oldFilePath))
         {
             File.Delete(oldFilePath);
         }
     }
+
+    private string ProfilesFolder => Path.Combine(
+        Configuration["Storage:RootPath"] ?? Environment.ContentRootPath,
+        "uploads",
+        "profiles");
 }

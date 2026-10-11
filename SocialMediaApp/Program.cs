@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
@@ -9,11 +10,25 @@ using SocialMediaApp.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Azure App Service persists files written under /home. Storage__RootPath lets
+// production keep uploads and cookie-encryption keys there while local
+// development continues using the project directory.
+var storageRoot = builder.Configuration["Storage:RootPath"];
+var uploadsPath = Path.Combine(storageRoot ?? builder.Environment.ContentRootPath, "uploads");
+var dataProtectionKeysPath = Path.Combine(
+    storageRoot ?? builder.Environment.ContentRootPath,
+    storageRoot is null ? ".keys" : "keys");
+Directory.CreateDirectory(uploadsPath);
+Directory.CreateDirectory(dataProtectionKeysPath);
+
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath))
+    .SetApplicationName("SocialNet");
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 
@@ -68,9 +83,6 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();
-    // Apply the checked-in schema for a fresh local checkout only.
-    using var scope = app.Services.CreateScope();
-    scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.Migrate();
 }
 else
 {
@@ -78,11 +90,17 @@ else
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
+
+// This project runs as one App Service instance. EF's migration lock prevents
+// concurrent startup migrations and keeps a fresh deployment's schema current.
+using (var scope = app.Services.CreateScope())
+{
+    scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.Migrate();
+}
+
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
 // Uploaded profile pictures are kept outside wwwroot and served from /uploads.
-var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "uploads");
-Directory.CreateDirectory(uploadsPath);
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(uploadsPath),
@@ -94,6 +112,7 @@ app.UseAuthorization();
 app.UseAntiforgery();
 
 app.MapStaticAssets();
+app.MapGet("/health", () => Results.Ok(new { status = "healthy" })).AllowAnonymous();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

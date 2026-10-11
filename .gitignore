@@ -7,3 +7,4 @@
 .DS_Store
 **/Data/*.db-journal
 SocialMediaApp/uploads/
+SocialMediaApp/.keys/
